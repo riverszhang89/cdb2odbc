@@ -165,6 +165,11 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT hstmt, SQLSMALLINT type)
                 tn = "blob";
                 break;
             case SQL_TIMESTAMP:
+            case SQL_TYPE_TIMESTAMP:
+                tn = "datetimeus";
+                break;
+            case SQL_TYPE_DATE:
+            case SQL_TYPE_TIME:
                 tn = "datetime";
                 break;
             case SQL_INTERVAL_YEAR_TO_MONTH:
@@ -301,7 +306,13 @@ SQLRETURN SQL_API SQLGetInfo(
             SET_SQLUINT(value_ptr, (SQL_TXN_READ_COMMITTED | SQL_TXN_SERIALIZABLE), minimum_length_required);
             break;
 
+        case SQL_CURSOR_COMMIT_BEHAVIOR:
+        case SQL_CURSOR_ROLLBACK_BEHAVIOR:
+            SET_SQLUINT(value_ptr, SQL_CB_CLOSE, minimum_length_required);
+            break;
+
         default:
+            __debug("Unhandled type %d", type);
             if(!handled)
                 ret = DBC_ODBC_ERR(ERROR_TYPE_OUT_OF_RANGE);
             break;

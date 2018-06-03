@@ -37,7 +37,7 @@ endif
 CFLAGS_DEF+=-D__LOG__ -D__COLORFUL__ #-D__DEBUG__
 
 CFLAGS+=-I$(PREFIX)/include $(CFLAGS_64) $(CFLAGS_PIC) $(CFLAGS_DEF)
-LDFLAGS+=-lodbcinst -L$(PREFIX)/lib -lcdb2api -lcdb2protobuf -lprotobuf-c \
+LDFLAGS+=-lodbcinst -L$(PREFIX)/lib -lcdb2api -lprotobuf-c \
          -lssl -lcrypto -lpthread -lrt -lm $(LDFLAGS_OSLIBS) $(LDFLAGS_64)
 
 $(LIBRARY): $(OBJECTS)

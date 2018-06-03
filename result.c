@@ -592,7 +592,7 @@ SQLRETURN SQL_API SQLRowCount(SQLHSTMT hstmt, SQLLEN *count)
             /* SQLRowCount returns the count of AFFECTED rows. For a select statement, the behavior is driver-defined. 
                Most of drivers return the number of tuples for a SELECT statement. So we follow the convention. 
                For more details, see http://msdn.microsoft.com/en-us/library/ms711835(v=vs.85).aspx */
-            *count = phstmt->effects->num_selected;
+            *count = -1;
         }
     }
 

@@ -163,11 +163,11 @@ typedef struct dbc {
 
 /* SQL statement types */
 typedef enum {
-    STMT_SELECT = 0,
     STMT_INSERT,
     STMT_UPDATE,
     STMT_DELETE,
     STMT_HAS_NO_EFFECT, /* used as a boundary. */
+    STMT_SELECT,
 
     STMT_SET,
     STMT_BEGIN,
