@@ -35,6 +35,7 @@ const static struct err_msg {
     , [ERROR_INVALID_APP_BUF_TYPE] = {"HY003", "Invalid application buffer type", SQL_ERROR}
     , [ERROR_INVALID_STRING_FOR_CASTING] = {"22018", "Invalid character value for cast specification", SQL_ERROR}
     , [ERROR_UNSUPPORTED_OPTION_VALUE] = {"01S02", "The option value is not supported", SQL_ERROR}
+    , [ERROR_INVALID_DATA_TYPE] = {"HY003", "The type is not a valid SQL data type, or it is not yet supported by the driver", SQL_ERROR}
 };
 
 const static int TOTAL_ERR_COUNT = ALEN(COMDB2_ERR_MSGS);

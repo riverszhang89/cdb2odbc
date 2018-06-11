@@ -104,6 +104,70 @@ conv_resp convert_cdb2datetime(const void *value, int size, SQLSMALLINT c_data_t
 }
 
 /*
+   Converts a datetimeus value to a @c_data_type value. 
+ */
+conv_resp convert_cdb2datetimeus(const void *value, int size,
+        SQLSMALLINT c_data_type, SQLPOINTER target_ptr, SQLLEN target_len, SQLLEN *str_len)
+{
+    cdb2_client_datetimeus_t *datetime = (cdb2_client_datetimeus_t *)value;
+    DATE_STRUCT *date;
+    TIME_STRUCT *time;
+    TIMESTAMP_STRUCT *timestamp;
+
+    switch(c_data_type) {
+        case SQL_C_CHAR:
+            *str_len = snprintf((char *)target_ptr, target_len, "%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.6d %.*s", 
+                    datetime->tm.tm_year + 1900, datetime->tm.tm_mon + 1, datetime->tm.tm_mday, datetime->tm.tm_hour,
+                    datetime->tm.tm_min, datetime->tm.tm_sec, datetime->usec, CDB2_MAX_TZNAME, datetime->tzname);
+            if(*str_len >= target_len)
+                return CONV_TRUNCATED;
+            break;
+
+        case SQL_C_WCHAR:
+            *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t),
+                    L"%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.6d %.*hs", datetime->tm.tm_year + 1900,
+                    datetime->tm.tm_mon + 1, datetime->tm.tm_mday, datetime->tm.tm_hour,
+                    datetime->tm.tm_min, datetime->tm.tm_sec, datetime->usec, CDB2_MAX_TZNAME, datetime->tzname);
+            if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
+                return CONV_TRUNCATED;
+            break;
+            
+        case SQL_C_TYPE_DATE:
+            date = (DATE_STRUCT *)target_ptr;
+            date->year = (SQLSMALLINT)datetime->tm.tm_year + 1900;
+            date->month = (SQLSMALLINT)datetime->tm.tm_mon + 1;
+            date->day = (SQLSMALLINT)datetime->tm.tm_mday;
+            *str_len = sizeof(DATE_STRUCT);
+            break;
+
+        case SQL_C_TYPE_TIME:
+            time = (TIME_STRUCT *)target_ptr;
+			time->hour = (SQLUSMALLINT)datetime->tm.tm_hour;
+            time->minute = (SQLUSMALLINT)datetime->tm.tm_min;
+            time->second = (SQLUSMALLINT)datetime->tm.tm_sec;
+            *str_len = sizeof(TIME_STRUCT);
+            break;
+
+        case SQL_C_TYPE_TIMESTAMP:
+        case SQL_C_DEFAULT:
+            timestamp = (TIMESTAMP_STRUCT *)target_ptr;
+            timestamp->year = (SQLSMALLINT)datetime->tm.tm_year + 1900;
+            timestamp->month = (SQLUSMALLINT)datetime->tm.tm_mon + 1;
+            timestamp->day = (SQLUSMALLINT)datetime->tm.tm_mday;
+            timestamp->hour = (SQLUSMALLINT)datetime->tm.tm_hour;
+            timestamp->minute = (SQLUSMALLINT)datetime->tm.tm_min;
+            timestamp->second = (SQLUSMALLINT)datetime->tm.tm_sec;
+            timestamp->fraction = datetime->usec * 1000;
+            *str_len = sizeof(TIMESTAMP_STRUCT);
+            break;
+
+        default:
+            return CONV_IMPOSSIBLE;
+    }
+    return CONV_YEAH;
+}
+
+/*
    Converts a intervalds value to a @c_data_type value. 
 
    FIXME Currently, this function only supports ds-to-interval day/hour/min/sec... conversion.
@@ -146,6 +210,56 @@ conv_resp convert_cdb2inds(const void *value, int size, SQLSMALLINT c_data_type,
             intv_odbc->intval.day_second.minute = intv_cdb2->mins;
             intv_odbc->intval.day_second.second = intv_cdb2->sec;
             intv_odbc->intval.day_second.fraction = intv_cdb2->msec * 1000000;
+            *str_len = sizeof(SQL_INTERVAL_STRUCT);
+            break;
+
+        default:
+            return CONV_IMPOSSIBLE;
+    }
+    return CONV_YEAH;
+}
+
+/*
+   Converts a intervaldsus value to a @c_data_type value. 
+ */
+conv_resp convert_cdb2indsus(const void *value, int size, SQLSMALLINT c_data_type, SQLPOINTER target_ptr, SQLLEN target_len, SQLLEN *str_len)
+{
+    cdb2_client_intv_dsus_t *intv_cdb2 = (cdb2_client_intv_dsus_t *)value;
+    SQL_INTERVAL_STRUCT *intv_odbc = (SQL_INTERVAL_STRUCT *)target_ptr;
+
+    switch(c_data_type) {
+        case SQL_C_CHAR:
+            *str_len = snprintf((char *)target_ptr, target_len, "%d %d:%d:%d.%d",
+                    intv_cdb2->sign * intv_cdb2->days, intv_cdb2->hours, intv_cdb2->mins, intv_cdb2->sec, intv_cdb2->usec);
+            if(*str_len >= target_len)
+                return CONV_TRUNCATED;
+            break;
+        case SQL_C_WCHAR:
+            *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%d %d:%d:%d.%d",
+                    intv_cdb2->sign * intv_cdb2->days, intv_cdb2->hours, intv_cdb2->mins, intv_cdb2->sec, intv_cdb2->usec);
+            if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
+                return CONV_TRUNCATED;
+            break;
+        case SQL_C_INTERVAL_DAY:
+        case SQL_C_INTERVAL_HOUR:
+        case SQL_C_INTERVAL_MINUTE:
+        case SQL_C_INTERVAL_SECOND:
+        case SQL_C_INTERVAL_DAY_TO_HOUR:
+        case SQL_C_INTERVAL_DAY_TO_MINUTE:
+        case SQL_C_INTERVAL_DAY_TO_SECOND:
+        case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+        case SQL_C_INTERVAL_HOUR_TO_SECOND:
+        case SQL_C_INTERVAL_MINUTE_TO_SECOND:
+        case SQL_C_DEFAULT:
+            /* I will not do any calculation here (like 2 days and 6 hrs ==> 54 hrs). 
+               The flag @interval_type will always set to SQL_IS_DAY_TO_SECOND. */
+			intv_odbc->interval_type = SQL_IS_DAY_TO_SECOND;
+			intv_odbc->interval_sign = (SQLSMALLINT)intv_cdb2->sign;
+            intv_odbc->intval.day_second.day = intv_cdb2->days;
+            intv_odbc->intval.day_second.hour = intv_cdb2->hours;
+            intv_odbc->intval.day_second.minute = intv_cdb2->mins;
+            intv_odbc->intval.day_second.second = intv_cdb2->sec;
+            intv_odbc->intval.day_second.fraction = intv_cdb2->usec * 1000;
             *str_len = sizeof(SQL_INTERVAL_STRUCT);
             break;
 
@@ -1030,6 +1144,105 @@ conv_resp convert_and_bind_datetime(cdb2_hndl_tp *sqlh, struct param *param)
 }
 
 /**
+ * Convert a datetimeus to CDB2 type and bind the parameter using CDB2 API.
+ * See http://msdn.microsoft.com/en-us/library/ms714147(v=vs.85).aspx for details.
+ *
+ * @return
+ *  CONV_MEM_FAIL           -   memory allocation failure.
+ *  CONV_OOPS               -   what the hell?
+ *  CONV_UNSUPPORTED_C_TYPE -   type unsupported.
+ *  CONV_IMPOSSIBLE         -   conversion impossible.
+ *  CONV_INTERNAL_ERR       -   cdb2 api reports an error.
+ *  CONV_YEAH               -   yeah!
+ */
+conv_resp convert_and_bind_datetimeus(cdb2_hndl_tp *sqlh, struct param *param)
+{
+    conv_resp resp = CONV_YEAH;
+    cdb2_client_datetimeus_t *datetime;
+    DATE_STRUCT *date_struct;
+    TIME_STRUCT *time_struct;
+    TIMESTAMP_STRUCT *ts_struct;
+    char *name = param->name + 1;
+
+    __debug("Try to bind datetimeus.");
+
+    if(!param->buf) { /* A NULL value */
+        if(cdb2_bind_param(sqlh, name, CDB2_DATETIME, NULL, 0))
+            return CONV_INTERNAL_ERR;
+        return CONV_YEAH;
+    }
+
+    switch(param->c_type) {
+        case SQL_C_TYPE_DATE:
+            if((datetime = my_calloc(cdb2_client_datetimeus_t, 1)) == NULL)
+                return CONV_MEM_FAIL;
+
+            date_struct = (DATE_STRUCT *)param->buf;
+            datetime->tm.tm_year = date_struct->year - 1900;
+            datetime->tm.tm_mon  = date_struct->month - 1;
+            datetime->tm.tm_mday = date_struct->day;
+
+            break;
+
+        case SQL_C_TYPE_TIME:
+            if((datetime = my_calloc(cdb2_client_datetimeus_t, 1)) == NULL)
+                return CONV_MEM_FAIL;
+
+            time_struct = (TIME_STRUCT *)param->buf;
+            datetime->tm.tm_hour = time_struct->hour;
+            datetime->tm.tm_min  = time_struct->minute;
+            datetime->tm.tm_sec  = time_struct->second;
+
+            break;
+
+        case SQL_C_TYPE_TIMESTAMP:
+        case SQL_C_DEFAULT:
+            if((datetime = my_calloc(cdb2_client_datetimeus_t, 1)) == NULL)
+                return CONV_MEM_FAIL;
+
+            ts_struct = (TIMESTAMP_STRUCT *)param->buf;
+            datetime->tm.tm_year = ts_struct->year - 1900;
+            datetime->tm.tm_mon  = ts_struct->month - 1;
+            datetime->tm.tm_mday = ts_struct->day;
+            datetime->tm.tm_hour = ts_struct->hour;
+            datetime->tm.tm_min  = ts_struct->minute;
+            datetime->tm.tm_sec  = ts_struct->second;
+
+            /* @fraction is nanoseconds. 
+               See http://msdn.microsoft.com/en-us/library/ms714556(v=vs.85).aspx for details. */
+            datetime->usec       = (int)(ts_struct->fraction / 1000);
+			break;
+        
+        default:
+            __debug("Not a valid datetimeus type.");
+            return CONV_UNSUPPORTED_C_TYPE;
+    }
+
+    /* Timezone info will be populated by CDB2API. */
+    param->internal_buffer = datetime;
+
+    switch(param->sql_type) {
+        case SQL_CHAR:
+        case SQL_VARCHAR:
+        case SQL_LONGVARCHAR:
+        case SQL_WCHAR:
+        case SQL_WVARCHAR:
+        case SQL_WLONGVARCHAR:
+        case SQL_TYPE_DATE:
+        case SQL_TYPE_TIME:
+        case SQL_TYPE_TIMESTAMP:
+            if(cdb2_bind_param(sqlh, name, CDB2_DATETIME, param->internal_buffer, sizeof(cdb2_client_datetimeus_t)))
+                resp = CONV_INTERNAL_ERR;
+            break;
+
+        default:
+            resp = CONV_IMPOSSIBLE;
+    }
+
+    return resp;
+}
+
+/**
  * Convert a year-month interval to CDB2 type and bind the parameter using CDB2 API.
  * See http://msdn.microsoft.com/en-us/library/ms714147(v=vs.85).aspx for details.
  *
@@ -1235,6 +1448,121 @@ conv_resp convert_and_bind_intv_ds(cdb2_hndl_tp *sqlh, struct param *param)
             param->internal_buffer = (void *)intv_cdb2;
 
             if(cdb2_bind_param(sqlh, name, CDB2_INTERVALDS, param->internal_buffer, sizeof(cdb2_client_intv_ds_t)))
+                return CONV_INTERNAL_ERR;
+
+        case SQL_TINYINT:
+        case SQL_SMALLINT:
+        case SQL_INTEGER:
+        case SQL_BIGINT:
+        case SQL_NUMERIC:
+        case SQL_DECIMAL:
+
+            if(param->c_type == SQL_C_INTERVAL_DAY) {
+                dhmsf = intv_odbc->intval.day_second.day * intv_odbc->interval_sign;
+                return cdb2_bind_int(name, dhmsf, &param->internal_buffer, sqlh);
+            } else if(param->c_type == SQL_C_INTERVAL_HOUR) {
+                dhmsf = intv_odbc->intval.day_second.hour * intv_odbc->interval_sign;
+                return cdb2_bind_int(name, dhmsf, &param->internal_buffer, sqlh);
+            } else if(param->c_type == SQL_C_INTERVAL_MINUTE) {
+                dhmsf = intv_odbc->intval.day_second.minute * intv_odbc->interval_sign;
+                return cdb2_bind_int(name, dhmsf, &param->internal_buffer, sqlh);
+            } else if(param->c_type == SQL_C_INTERVAL_SECOND) {
+                dhmsf = intv_odbc->intval.day_second.second * intv_odbc->interval_sign;
+                return cdb2_bind_int(name, dhmsf, &param->internal_buffer, sqlh);
+            } else
+                return CONV_IMPOSSIBLE;
+
+        default:
+            return CONV_IMPOSSIBLE;
+    }
+}
+/**
+ * Convert a day-second interval to CDB2 type and bind the parameter using CDB2 API.
+ * See http://msdn.microsoft.com/en-us/library/ms714147(v=vs.85).aspx for details.
+ *
+ * @return
+ *  CONV_MEM_FAIL           -   memory allocation failure.
+ *  CONV_OOPS               -   what the hell?
+ *  CONV_UNSUPPORTED_C_TYPE -   type unsupported.
+ *  CONV_IMPOSSIBLE         -   conversion impossible.
+ *  CONV_INTERNAL_ERR       -   cdb2 api reports an error.
+ *  CONV_YEAH               -   yeah!
+ */
+conv_resp convert_and_bind_intv_dsus(cdb2_hndl_tp *sqlh, struct param *param)
+{
+    cdb2_client_intv_dsus_t *intv_cdb2;
+    SQL_INTERVAL_STRUCT *intv_odbc;
+    LL dhmsf; /* day or hour or min or sec or frac */
+    char *name = param->name + 1;
+
+    __debug("Try to bind day-time interval.");
+
+    if(!param->buf) { /* A NULL value */
+        if(cdb2_bind_param(sqlh, name, CDB2_INTERVALDS, NULL, 0))
+            return CONV_INTERNAL_ERR;
+        return CONV_YEAH;
+    }
+
+    switch(param->c_type) {
+        case SQL_C_INTERVAL_DAY:
+        case SQL_C_INTERVAL_HOUR:
+        case SQL_C_INTERVAL_MINUTE:
+        case SQL_C_INTERVAL_SECOND:
+        case SQL_C_INTERVAL_DAY_TO_HOUR:
+        case SQL_C_INTERVAL_DAY_TO_MINUTE:
+        case SQL_C_INTERVAL_DAY_TO_SECOND:
+        case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+        case SQL_C_INTERVAL_HOUR_TO_SECOND:
+        case SQL_C_INTERVAL_MINUTE_TO_SECOND:
+        case SQL_C_DEFAULT:
+            intv_odbc = (SQL_INTERVAL_STRUCT *)param->buf;
+            break;
+
+        default:
+            __debug("Not a valid day-second interval type.");
+            return CONV_UNSUPPORTED_C_TYPE;
+    }
+
+    switch(param->sql_type) {
+        case SQL_CHAR:
+        case SQL_VARCHAR:
+        case SQL_LONGVARCHAR:
+        case SQL_WCHAR:
+        case SQL_WVARCHAR:
+        case SQL_WLONGVARCHAR:
+            /* #3 TODO Support among-interval-types conversion (like what I did in bind_intv_ym).
+             For example, a 3-day interval gives a 72-hours interval, a 4-hour interval gives a 240-minutes interval. 
+             Because 1. a day-time interval has 10 combinations (versus 3 combination of a year-mon interval). 
+             2. intv_ds has 5 fields (versus 2 fields of intv_ym, conversion rules for day-time intervals are much much more 'labour working' 
+             than year-month intervals. */
+        case SQL_C_INTERVAL_DAY:
+        case SQL_C_INTERVAL_HOUR:
+        case SQL_C_INTERVAL_MINUTE:
+        case SQL_C_INTERVAL_SECOND:
+        case SQL_C_INTERVAL_DAY_TO_HOUR:
+        case SQL_C_INTERVAL_DAY_TO_MINUTE:
+        case SQL_C_INTERVAL_DAY_TO_SECOND:
+        case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+        case SQL_C_INTERVAL_HOUR_TO_SECOND:
+        case SQL_C_INTERVAL_MINUTE_TO_SECOND:
+
+            /* FIXME see #3 */
+            if(intv_odbc->interval_type != SQL_IS_DAY_TO_SECOND)
+                return CONV_IMPOSSIBLE;
+
+            if((intv_cdb2 = my_malloc(cdb2_client_intv_dsus_t, 1)) == NULL)
+                return CONV_MEM_FAIL;
+
+            intv_cdb2->sign   = intv_odbc->interval_sign;
+            intv_cdb2->days   = intv_odbc->intval.day_second.day;
+            intv_cdb2->hours  = intv_odbc->intval.day_second.hour;
+            intv_cdb2->mins   = intv_odbc->intval.day_second.minute;
+            intv_cdb2->sec    = intv_odbc->intval.day_second.second;
+            intv_cdb2->usec   = (int)(intv_odbc->intval.day_second.fraction / 1000);
+
+            param->internal_buffer = (void *)intv_cdb2;
+
+            if(cdb2_bind_param(sqlh, name, CDB2_INTERVALDS, param->internal_buffer, sizeof(cdb2_client_intv_dsus_t)))
                 return CONV_INTERNAL_ERR;
 
         case SQL_TINYINT:

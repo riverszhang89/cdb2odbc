@@ -48,7 +48,7 @@ typedef enum {
     , ERROR_INVALID_APP_BUF_TYPE
     , ERROR_INVALID_STRING_FOR_CASTING
     , ERROR_UNSUPPORTED_OPTION_VALUE
-
+    , ERROR_INVALID_DATA_TYPE
 } errid_t;
 
 /* -1 is used as native error code for ODBC-defined errors (e.g., memory allocation failure, null pointer...). */

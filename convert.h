@@ -34,6 +34,8 @@ CDB2_CONV_PROTO(blob);
 CDB2_CONV_PROTO(datetime);
 CDB2_CONV_PROTO(inym);
 CDB2_CONV_PROTO(inds);
+CDB2_CONV_PROTO(datetimeus);
+CDB2_CONV_PROTO(indsus);
 
 /* Function prototype of cdb2 convertors. */
 typedef conv_resp (*cdb2_conv_func_t)(const void *,         /* data retrieved */
@@ -47,13 +49,16 @@ typedef conv_resp (*cdb2_conv_func_t)(const void *,         /* data retrieved */
    The index may serve as a quick reference to its corresponding conversion function.
    So if.. elseif.. or switch/case is no longer needed. */
 const static cdb2_conv_func_t CDB2_CONVS[] = {
-    [CDB2_INTEGER]  =       CDB2_CONV(int)
-    ,[CDB2_REAL]    =       CDB2_CONV(real)
-    ,[CDB2_CSTRING] =       CDB2_CONV(cstring)
-    ,[CDB2_BLOB]    =       CDB2_CONV(blob)
-    ,[CDB2_DATETIME]    =   CDB2_CONV(datetime)
-    ,[CDB2_INTERVALYM]  =   CDB2_CONV(inym)
-    ,[CDB2_INTERVALDS]  =   CDB2_CONV(inds)
+    [CDB2_INTEGER]        = CDB2_CONV(int)
+    ,[CDB2_REAL]          = CDB2_CONV(real)
+    ,[CDB2_CSTRING]       = CDB2_CONV(cstring)
+    ,[CDB2_BLOB]          = CDB2_CONV(blob)
+    ,[CDB2_BLOB]          = CDB2_CONV(blob) /* Placeholder for type 5. */
+    ,[CDB2_DATETIME]      = CDB2_CONV(datetime)
+    ,[CDB2_INTERVALYM]    = CDB2_CONV(inym)
+    ,[CDB2_INTERVALDS]    = CDB2_CONV(inds)
+    ,[CDB2_DATETIMEUS]    = CDB2_CONV(datetimeus)
+    ,[CDB2_INTERVALDSUS]  = CDB2_CONV(indsus)
 };
 const static int NUM_CDB2_CONVS = ALEN(CDB2_CONVS);
 
@@ -70,6 +75,8 @@ CDB2_BIND_PROTO(blob);
 CDB2_BIND_PROTO(datetime);
 CDB2_BIND_PROTO(intv_ym);
 CDB2_BIND_PROTO(intv_ds);
+CDB2_BIND_PROTO(datetimeus);
+CDB2_BIND_PROTO(intv_dsus);
 
 typedef conv_resp (*cdb2_bind_func_t)(cdb2_hndl_tp *,           /* CDB2 handle */
                                       struct param *);          /* Parameter to be processed */
@@ -81,6 +88,8 @@ const static cdb2_bind_func_t CDB2_BINDS[] = {
     , CDB2_BIND(datetime)
     , CDB2_BIND(intv_ym)
     , CDB2_BIND(intv_ds)
+    , CDB2_BIND(datetimeus)
+    , CDB2_BIND(intv_dsus)
 };
 const static int NUM_CDB2_BINDS = ALEN(CDB2_BINDS);
 

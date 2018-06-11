@@ -142,7 +142,7 @@ SQLRETURN comdb2_SQLGetData(SQLHSTMT        hstmt,
                 break;
 
             case CONV_UNKNOWN_CDB2_TYPE:
-                eid = ERROR_INVALID_DESC_IDX;
+                eid = ERROR_INVALID_DATA_TYPE;
                 break;
 
             case CONV_UNKNOWN_C_TYPE:
@@ -159,6 +159,7 @@ SQLRETURN comdb2_SQLGetData(SQLHSTMT        hstmt,
         }
     }
 
+    __debug("eid = %d.", eid);
     __debug("leaves method.");
     return eid == ERROR_NA ? SQL_SUCCESS : STMT_ODBC_ERR(eid);
 }
@@ -225,10 +226,12 @@ SQLSMALLINT cdb2_to_sql(int cdb2_type)
         case CDB2_BLOB:
             return SQL_VARBINARY;
         case CDB2_DATETIME:
+        case CDB2_DATETIMEUS:
             return SQL_TIMESTAMP;
         case CDB2_INTERVALYM:
             return SQL_INTERVAL_YEAR_TO_MONTH;
         case CDB2_INTERVALDS:
+        case CDB2_INTERVALDSUS:
             return SQL_INTERVAL_DAY_TO_SECOND;
         default:
             break;
@@ -340,6 +343,8 @@ SQLRETURN SQL_API SQLDescribeCol(SQLHSTMT       hstmt,
     if((phstmt->status & STMT_READY) && SQL_FAILED(ret = comdb2_SQLExecute(hstmt)))
         return ret;
 
+    __debug("describing column %d.", col);
+
     --col;
     sqlh = phstmt->sqlh;
 
@@ -356,6 +361,7 @@ SQLRETURN SQL_API SQLDescribeCol(SQLHSTMT       hstmt,
     cdb2_type = cdb2_column_type(sqlh, col);
     if(sql_data_type)
         *sql_data_type = (SQLSMALLINT)cdb2_to_sql(cdb2_type);
+    __debug("cdb2_type is %d. sql type is %d.", cdb2_type, *sql_data_type);
 
     /* Column size - number of digits. So column size of 123.45 is 5 */
     if(col_size)
@@ -541,6 +547,7 @@ SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT hstmt, SQLSMALLINT *count)
     else if(!(phstmt->status & STMT_READY) || SQL_SUCCEEDED((ret = comdb2_SQLExecute(hstmt))))
         *count = (SQLSMALLINT)((phstmt->status & STMT_SQLCOLUMNS) ?
                 phstmt->col_count - 1 : phstmt->col_count);
+    __debug("result columns %d.", *count);
     __debug("leaves method.");
     return ret;
 }
