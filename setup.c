@@ -114,7 +114,7 @@ SQLRETURN SQL_API SQLGetFunctions(
 {
     (void)hdbc;
 
-    __debug("enters method. attr = %d", attr);
+    __debug("enters method.");
 
 	if (func == SQL_API_ODBC3_ALL_FUNCTIONS) {
 		memset(supported, 0, sizeof(SQLSMALLINT) * SQL_API_ODBC3_ALL_FUNCTIONS_SIZE);
