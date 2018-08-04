@@ -34,9 +34,6 @@ ifeq ($(arch),AIX)
   SHARED=-G
 endif
 
-CFLAGS_DEF+=-D__LOG__ -D__COLORFUL__
-CFLAGS_DEF+=-D__DEBUG__
-
 CFLAGS+=-I$(PREFIX)/include $(CFLAGS_64) $(CFLAGS_PIC) $(CFLAGS_DEF)
 LDFLAGS+=-lodbcinst -L$(PREFIX)/lib -lcdb2api -lprotobuf-c \
          -lssl -lcrypto -lpthread -lrt -lm $(LDFLAGS_OSLIBS) $(LDFLAGS_64)
