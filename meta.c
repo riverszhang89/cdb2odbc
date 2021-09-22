@@ -308,7 +308,7 @@ SQLRETURN SQL_API SQLGetInfo(
 
         case SQL_CURSOR_COMMIT_BEHAVIOR:
         case SQL_CURSOR_ROLLBACK_BEHAVIOR:
-            SET_SQLUINT(value_ptr, SQL_CB_CLOSE, minimum_length_required);
+            SET_SQLUSMALLINT(value_ptr, SQL_CB_CLOSE, minimum_length_required);
             break;
 
         default:
