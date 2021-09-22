@@ -1,4 +1,5 @@
 #include "convert.h"
+#include <stdint.h>
 
 /*
    Converts a real number to a @c_data_type value. 
@@ -440,11 +441,14 @@ conv_resp convert_cdb2int(const void *value, int size, SQLSMALLINT c_data_type, 
 conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_type, SQLPOINTER target_ptr, SQLLEN target_len, SQLLEN *str_len)
 {
     conv_resp resp = CONV_YEAH;
+    uint8_t dummy[6] = {0xE5, 0x8A, 0x9B, 0xE5, 0xAE, 0x9D };
+    wchar_t *wcs;
+    int mbslen;
+    int len;
 
     switch(c_data_type) {
         case SQL_C_CHAR:
         case SQL_C_DEFAULT:
-            /* size is str_len + 1 */
             my_strncpy_out((char *)target_ptr, value, target_len);
             *str_len = size - 1;
             if(size > target_len)
@@ -452,9 +456,9 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
             break;
 
         case SQL_C_WCHAR:
-            mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t) - 1);
-            *str_len = size - 1;
-            if(size > target_len)
+            len = MultiByteToWideChar(CP_UTF8, 0, value, -1, target_ptr, target_len / sizeof(wchar_t));
+            *str_len = len * sizeof(wchar_t);
+            if(size > (target_len / sizeof(wchar_t)))
                 resp = CONV_TRUNCATED;
             break;
         default:

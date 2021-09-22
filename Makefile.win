@@ -23,7 +23,7 @@
 
 # Build with optimization unless instructed otherwise.
 !IFNDEF CONFIG
-CONFIG=Release
+CONFIG=Debug
 !ENDIF
 
 # Build with SSL support unless instructed otherwise.
@@ -60,7 +60,7 @@ _MSC_VER=1900
 
 CC=cl.exe
 CFLAGS=/nologo $(CFLAG_CFG) $(CFLAGS_INC) $(CFLAGS_DEF) /c
-CFLAGS_DEF=
+CFLAGS_DEF=-D__DEBUG__ -D__LOG__
 
 !IF $(WITH_SSL) == 0
 CFLAGS_DEF=$(CFLAGS_DEF) /DWITH_SSL=0
@@ -93,7 +93,7 @@ LD=link.exe /DLL /incremental:no
 
 LDLIBS_3RD_PARTY=protobuf-c.lib
 !IF $(WITH_SSL) != 0
-LDLIBS_3RD_PARTY=$(LDLIBS_3RD_PARTY) ssleay32.lib libeay32.lib
+LDLIBS_3RD_PARTY=$(LDLIBS_3RD_PARTY) libssl.lib libcrypto.lib
 !ENDIF
 LDLIBS_WIN_CORE=user32.lib gdi32.lib uuid.lib wsock32.lib ws2_32.lib libcmt.lib /nodefaultlib:msvcrt.lib odbc32.lib odbccp32.lib
 LDLIBS=$(LDLIBS_3RD_PARTY) $(LDLIBS_WIN_CORE) libcdb2api.lib
@@ -102,7 +102,7 @@ LDLIBS=$(LDLIBS_3RD_PARTY) $(LDLIBS_WIN_CORE) libcdb2api.lib
 LDLIBPATH=/LIBPATH:"$(CDB2API_LIB)"
 !ENDIF
 !IFDEF PROTOC_LIB
-LDLIBPATH=/LIBPATH:"$(PROTOC_LIB)"
+LDLIBPATH=$(LDLIBPATH) /LIBPATH:"$(PROTOC_LIB)"
 !ENDIF
 !IFDEF OPENSSL_LIB
 LDLIBPATH=$(LDLIBPATH) /LIBPATH:"$(OPENSSL_LIB)"

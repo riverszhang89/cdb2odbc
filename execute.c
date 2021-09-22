@@ -682,6 +682,8 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT       hstmt,
     
     __debug("enters method.");
 
+    __debug("c_type is %d", c_type);
+
     if(!hstmt)
         return SQL_INVALID_HANDLE;
     
@@ -800,3 +802,5 @@ SQLRETURN SQL_API SQLTransact(
     return ( hdbc ? comdb2_SQLEndTran(SQL_HANDLE_DBC, hdbc, commit_or_rollback)
             : comdb2_SQLEndTran(SQL_HANDLE_ENV, henv, commit_or_rollback) );
 }
+
+#include "executew.c"

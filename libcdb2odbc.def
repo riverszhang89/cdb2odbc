@@ -1,4 +1,4 @@
-LIBRARY cdb2odbc
+LIBRARY libcdb2odbc
 EXPORTS
 SQLAllocConnect @1
 SQLAllocEnv @2
@@ -53,3 +53,9 @@ SQLTables @50
 SQLTransact @51
 ConfigDriver @52
 ConfigDSN @53
+SQLConnectW @54
+SQLDriverConnectW @55
+SQLGetInfoW @56
+SQLExecDirectW @57
+SQLDescribeColW @58
+SQLColAttributeW @59
