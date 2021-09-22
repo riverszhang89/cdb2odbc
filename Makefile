@@ -1,5 +1,5 @@
 PREFIX?=/opt/bb
-OBJECTS=attr.o connect.o convert.o error.o execute.o handle.o meta.o result.o util.o
+OBJECTS=attr.o connect.o convert.o error.o execute.o handle.o meta.o result.o util.o wcs.o
 LIBRARY=libcdb2odbc.so
 
 arch:=$(shell uname)
@@ -7,7 +7,7 @@ export $(arch)
 
 ifeq ($(arch),Linux)
   CC=gcc -g
-  CFLAGS+=-Werror -Wall
+  CFLAGS+=-Werror -Wall -D__LOG__ -D__DEBUG__ -D__UNICODE__
   CFLAGS_64+=-m64 -std=c99
   CFLAGS_PIC+=-fPIC
   CFLAGS_DEF+=-D_GNU_SOURCE -D_XOPEN_SOURCE=600 -D__UNIXODBC__
@@ -36,7 +36,7 @@ endif
 
 CFLAGS+=-I$(PREFIX)/include $(CFLAGS_64) $(CFLAGS_PIC) $(CFLAGS_DEF)
 LDFLAGS+=-lodbcinst -L$(PREFIX)/lib -lcdb2api -lprotobuf-c \
-         -lssl -lcrypto -lpthread -lrt -lm $(LDFLAGS_OSLIBS) $(LDFLAGS_64)
+         -lssl -lcrypto -lpthread -lrt -lm $(LDFLAGS_OSLIBS) $(LDFLAGS_64) -Wl,-rpath=$(PREFIX)/lib
 
 $(LIBRARY): $(OBJECTS)
 	$(CC) $(SHARED) $(LDFLAGS) $^ -o $@

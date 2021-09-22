@@ -88,14 +88,15 @@ ERR_FUNC(env);
 ERR_FUNC(dbc);
 ERR_FUNC(stmt);
 
-SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT     handle_type, 
-                                SQLHANDLE       hndl, 
-                                SQLSMALLINT     rec_no, 
-                                SQLCHAR         *sql_state, 
-                                SQLINTEGER      *native_ptr, 
-                                SQLCHAR         *msg, 
-                                SQLSMALLINT     msg_max, 
-                                SQLSMALLINT     *msg_len)
+SQLRETURN __SQLGetDiagRec(
+                SQLSMALLINT     handle_type, 
+                SQLHANDLE       hndl, 
+                SQLSMALLINT     rec_no, 
+                SQLCHAR         *sql_state, 
+                SQLINTEGER      *native_ptr, 
+                SQLCHAR         *msg, 
+                SQLSMALLINT     msg_max, 
+                SQLSMALLINT     *msg_len)
 {
     err_t *err;
 
@@ -145,6 +146,18 @@ SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT     handle_type,
     return SQL_SUCCESS;
 }
 
+SQLRETURN SQL_API SQLGetDiagRec(SQLSMALLINT     handle_type, 
+                                SQLHANDLE       hndl, 
+                                SQLSMALLINT     rec_no, 
+                                SQLCHAR         *sql_state, 
+                                SQLINTEGER      *native_ptr, 
+                                SQLCHAR         *msg, 
+                                SQLSMALLINT     msg_max, 
+                                SQLSMALLINT     *msg_len)
+{
+        return __SQLGetDiagRec(handle_type, hndl, rec_no, sql_state, native_ptr, msg, msg_max, msg_len);
+}
+
 SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT   handle_type, 
                                   SQLHANDLE     hndl, 
                                   SQLSMALLINT   rec_no, 
@@ -157,3 +170,7 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT   handle_type,
     __debug("enters method.");
     NOT_IMPL;
 }
+
+#ifdef __UNICODE__
+#include "errorw.c"
+#endif

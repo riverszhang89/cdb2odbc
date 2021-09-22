@@ -15,17 +15,24 @@ SQLRETURN comdb2_SQLConnect(dbc_t *phdbc)
     cdb2_hndl_tp *sqlh;
     conn_info_t *ci = &phdbc->ci;
     int rc;
+    __debug("enters method");
 
-    if(ci->database[0] == '\0' || ci->cluster[0] == '\0') 
+    if(ci->database[0] == '\0' || ci->cluster[0] == '\0') {
+	__debug("incomplete database information db %s cluster %s", ci->database, ci->cluster);
         return DBC_ODBC_ERR(ERROR_NO_CONF);
+    }
 
-    if((rc = cdb2_open(&sqlh, ci->database, ci->cluster, ci->flag)) != 0)
+    __debug("cdb2_open(%s, %s)", ci->database, ci->cluster);
+
+    if((rc = cdb2_open(&sqlh, ci->database, ci->cluster, ci->flag)) != 0) {
         return set_dbc_error(phdbc, ERROR_UNABLE_TO_CONN, NULL, rc);
+    }
 
     phdbc->sqlh = sqlh;
     phdbc->sqlh_status = SQLH_IDLE;
     phdbc->connected = true;
 
+    __debug("leaves method");
     return SQL_SUCCESS;
 }
 
@@ -48,7 +55,7 @@ static void complete_conn_info_by_dm(conn_info_t *ci)
     }
 }
 
-SQLRETURN SQL_API SQLConnect(
+SQLRETURN __SQLConnect(
         SQLHDBC         hdbc,
         SQLCHAR         *dsn,
         SQLSMALLINT     dsn_len,
@@ -75,6 +82,19 @@ SQLRETURN SQL_API SQLConnect(
 
     __debug("leaves method.");
     return comdb2_SQLConnect(phdbc);
+}
+
+
+SQLRETURN SQL_API SQLConnect(
+        SQLHDBC         hdbc,
+        SQLCHAR         *dsn,
+        SQLSMALLINT     dsn_len,
+        SQLCHAR         *uid,
+        SQLSMALLINT     uid_len,
+        SQLCHAR         *auth,
+        SQLSMALLINT     auth_len)
+{
+    return __SQLConnect(hdbc, dsn, dsn_len, uid, uid_len, auth, auth_len);
 }
 
 /**
@@ -119,7 +139,7 @@ static void get_conn_attrs(char *str, conn_info_t *ci)
             ci->dsn, ci->driver, ci->database, ci->cluster, ci->flag);
 }
 
-SQLRETURN SQL_API SQLDriverConnect(
+SQLRETURN __SQLDriverConnect(
         SQLHDBC         hdbc,
         SQLHWND         hwnd,
         SQLCHAR         *in_conn_str,
@@ -133,6 +153,8 @@ SQLRETURN SQL_API SQLDriverConnect(
     char _instr[MAX_CONN_INFO_LEN];
     char _outstr[MAX_CONN_INFO_LEN];
     conn_info_t *ci;
+
+    printf("my dbc is %p\n", hdbc);
 
     __debug("enters method.");
 
@@ -164,7 +186,7 @@ SQLRETURN SQL_API SQLDriverConnect(
     if(SQL_FAILED(comdb2_SQLConnect(phdbc)))
         return SQL_ERROR;
 
-    snprintf(_outstr, MAX_CONN_INFO_LEN, "dsn=%s;driver=%s;database=%s;cluster=%s;flag=%d.", 
+    snprintf(_outstr, MAX_CONN_INFO_LEN, "dsn=%s;driver=%s;database=%s;cluster=%s;flag=%d", 
             ci->dsn, ci->driver, ci->database, ci->cluster, ci->flag);
 
     if(out_conn_str)
@@ -177,6 +199,20 @@ SQLRETURN SQL_API SQLDriverConnect(
 	return SQL_SUCCESS;
 }
 
+SQLRETURN SQL_API SQLDriverConnect(
+        SQLHDBC         hdbc,
+        SQLHWND         hwnd,
+        SQLCHAR         *in_conn_str,
+        SQLSMALLINT     in_conn_strlen,
+        SQLCHAR         *out_conn_str,
+        SQLSMALLINT     out_conn_str_max,
+        SQLSMALLINT     *out_conn_strlen,
+        SQLUSMALLINT    drv_completion)
+{
+    return __SQLDriverConnect(hdbc, hwnd, in_conn_str, in_conn_strlen, out_conn_str, out_conn_str_max, out_conn_strlen, drv_completion);
+}
+
+
 SQLRETURN SQL_API SQLDisconnect(SQLHDBC hdbc)
 {
     dbc_t *phdbc = (dbc_t *)hdbc;
@@ -187,7 +223,7 @@ SQLRETURN SQL_API SQLDisconnect(SQLHDBC hdbc)
         return SQL_INVALID_HANDLE;
     
     if(!phdbc->connected)
-        return DBC_ODBC_ERR(ERROR_CONN_NOT_OPEN);
+        return SQL_SUCCESS;
 
     if(phdbc->sqlh) {
 
@@ -206,3 +242,7 @@ SQLRETURN SQL_API SQLDisconnect(SQLHDBC hdbc)
 
     return SQL_SUCCESS;
 }
+
+#ifdef __UNICODE__
+#include "connectw.c"
+#endif

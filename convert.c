@@ -1,4 +1,7 @@
+#include "wcs.h"
 #include "convert.h"
+#include <stdio.h>
+#include <stdint.h>
 
 /*
    Converts a real number to a @c_data_type value. 
@@ -69,6 +72,7 @@ conv_resp convert_cdb2datetime(const void *value, int size, SQLSMALLINT c_data_t
             break;
             
         case SQL_C_TYPE_DATE:
+	case SQL_C_DATE: /* odbc 2.x */
             date = (DATE_STRUCT *)target_ptr;
             date->year = (SQLSMALLINT)datetime->tm.tm_year + 1900;
             date->month = (SQLSMALLINT)datetime->tm.tm_mon + 1;
@@ -77,6 +81,7 @@ conv_resp convert_cdb2datetime(const void *value, int size, SQLSMALLINT c_data_t
             break;
 
         case SQL_C_TYPE_TIME:
+	case SQL_C_TIME: /* odbc 2.x */
             time = (TIME_STRUCT *)target_ptr;
 			time->hour = (SQLUSMALLINT)datetime->tm.tm_hour;
             time->minute = (SQLUSMALLINT)datetime->tm.tm_min;
@@ -85,6 +90,7 @@ conv_resp convert_cdb2datetime(const void *value, int size, SQLSMALLINT c_data_t
             break;
 
         case SQL_C_TYPE_TIMESTAMP:
+	case SQL_C_TIMESTAMP: /* odbc 2.x */
         case SQL_C_DEFAULT:
             timestamp = (TIMESTAMP_STRUCT *)target_ptr;
             timestamp->year = (SQLSMALLINT)datetime->tm.tm_year + 1900;
@@ -440,11 +446,11 @@ conv_resp convert_cdb2int(const void *value, int size, SQLSMALLINT c_data_type, 
 conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_type, SQLPOINTER target_ptr, SQLLEN target_len, SQLLEN *str_len)
 {
     conv_resp resp = CONV_YEAH;
+    int len;
 
     switch(c_data_type) {
         case SQL_C_CHAR:
         case SQL_C_DEFAULT:
-            /* size is str_len + 1 */
             my_strncpy_out((char *)target_ptr, value, target_len);
             *str_len = size - 1;
             if(size > target_len)
@@ -452,9 +458,11 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
             break;
 
         case SQL_C_WCHAR:
-            mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t) - 1);
-            *str_len = size - 1;
-            if(size > target_len)
+            //memcpy(target_ptr, value, (len = size > target_len ? target_len : size));
+            len = utf8_to_ucs2((SQLCHAR *)value, (SQLWCHAR *)target_ptr, target_len);
+            if (len > 0)
+                *str_len = (len - 1) * sizeof(SQLWCHAR);
+            if(size > (target_len / sizeof(SQLWCHAR)))
                 resp = CONV_TRUNCATED;
             break;
         default:

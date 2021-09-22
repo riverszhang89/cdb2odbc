@@ -51,13 +51,19 @@ static SQLRETURN comdb2_SQLSetConnectAttr(
             phdbc->txn_isolation = (int)(intptr_t)buf;
             phdbc->txn_changed = true;
             break;
-
-        default:
-            return DBC_ODBC_ERR(ERROR_UNIMPL_ATTR);
     }
 
     __debug("leaves method.");
     return SQL_SUCCESS;
+}
+
+SQLRETURN __SQLSetConnectAttr(
+        SQLHDBC       hdbc,
+        SQLINTEGER    attr,
+        SQLPOINTER    buf,
+        SQLINTEGER    str_len)
+{
+    return comdb2_SQLSetConnectAttr(hdbc, attr, buf, str_len);
 }
 
 SQLRETURN SQL_API SQLSetConnectAttr(
@@ -66,7 +72,7 @@ SQLRETURN SQL_API SQLSetConnectAttr(
         SQLPOINTER    buf,
         SQLINTEGER    str_len)
 {
-    return comdb2_SQLSetConnectAttr(hdbc, attr, buf, str_len);
+    return __SQLSetConnectAttr(hdbc, attr, buf, str_len);
 }
 
 SQLRETURN SQL_API SQLSetConnectOption(
@@ -110,8 +116,17 @@ static SQLRETURN comdb2_SQLGetConnectAttr(
         *str_len = minimum_length_required;
 
     __debug("leaves method.");
-    return (is_str_attr && minimum_length_required >= buflen) ? 
-        DBC_ODBC_ERR(ERROR_STR_TRUNCATED) : SQL_SUCCESS;
+    return SQL_SUCCESS;
+}
+
+SQLRETURN __SQLGetConnectAttr(
+        SQLHDBC        hdbc,
+        SQLINTEGER     attr,
+        SQLPOINTER     buf,
+        SQLINTEGER     buflen,
+        SQLINTEGER     *str_len)
+{
+    return comdb2_SQLGetConnectAttr(hdbc, attr, buf, buflen, str_len);
 }
 
 SQLRETURN SQL_API SQLGetConnectAttr(
@@ -121,7 +136,7 @@ SQLRETURN SQL_API SQLGetConnectAttr(
         SQLINTEGER     buflen,
         SQLINTEGER     *str_len)
 {
-    return comdb2_SQLGetConnectAttr(hdbc, attr, buf, buflen, str_len);
+    return __SQLGetConnectAttr(hdbc, attr, buf, buflen, str_len);
 }
 
 SQLRETURN SQL_API SQLGetConnectOption(
@@ -165,13 +180,22 @@ static SQLRETURN comdb2_SQLSetStmtAttr(
     return SQL_SUCCESS;
 }
 
-SQLRETURN SQL_API SQLSetStmtAttr(
+SQLRETURN __SQLSetStmtAttr(
         SQLHSTMT      hstmt,
         SQLINTEGER    attr,
         SQLPOINTER    buf,
         SQLINTEGER    str_len)
 {
     return comdb2_SQLSetStmtAttr(hstmt, attr, buf, str_len);
+}
+
+SQLRETURN SQL_API SQLSetStmtAttr(
+        SQLHSTMT      hstmt,
+        SQLINTEGER    attr,
+        SQLPOINTER    buf,
+        SQLINTEGER    str_len)
+{
+    return __SQLSetStmtAttr(hstmt, attr, buf, str_len);
 }
 
 SQLRETURN SQL_API SQLSetStmtOption(
@@ -232,7 +256,7 @@ static SQLRETURN comdb2_SQLGetStmtAttr(
     return SQL_SUCCESS;
 }
 
-SQLRETURN SQL_API SQLGetStmtAttr(
+SQLRETURN __SQLGetStmtAttr(
         SQLHSTMT        stmt,
         SQLINTEGER      attr,
         SQLPOINTER      buf,
@@ -240,6 +264,16 @@ SQLRETURN SQL_API SQLGetStmtAttr(
         SQLINTEGER      *str_len)
 {
     return comdb2_SQLGetStmtAttr(stmt, attr, buf, buflen, str_len);
+}
+
+SQLRETURN SQL_API SQLGetStmtAttr(
+        SQLHSTMT        stmt,
+        SQLINTEGER      attr,
+        SQLPOINTER      buf,
+        SQLINTEGER      buflen,
+        SQLINTEGER      *str_len)
+{
+    return __SQLGetStmtAttr(stmt, attr, buf, buflen, str_len);
 }
 
 SQLRETURN SQL_API SQLGetStmtOption(
@@ -256,3 +290,7 @@ SQLRETURN SQL_API SQLGetDescField(SQLHDESC handle, SQLSMALLINT recno,
 {
 	NOT_IMPL;
 }
+
+#ifdef __UNICODE__
+#include "attrw.c"
+#endif

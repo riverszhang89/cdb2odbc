@@ -356,12 +356,8 @@ static SQLRETURN comdb2_SQLCloseCursor(stmt_t* phstmt)
     phstmt->error = NULL;
     phstmt->col_count = 0;
 
-    if(rc == CDB2_OK_DONE) {
-        __debug("leaves method.");
-        return SQL_SUCCESS;
-    }
-    
-    return set_stmt_error(phstmt, ERROR_NVM, "Internal error.", rc);
+    __debug("leaves method.");
+    return SQL_SUCCESS;
 }
 
 /******************

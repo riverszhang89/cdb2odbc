@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT hstmt, SQLSMALLINT type)
+SQLRETURN __SQLGetTypeInfo(SQLHSTMT hstmt, SQLSMALLINT type)
 {
     stmt_t *phstmt = (stmt_t *)hstmt;
     char metaquery[MAX_INTERNAL_QUERY_LEN + 1];
@@ -197,13 +197,18 @@ SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT hstmt, SQLSMALLINT type)
     return comdb2_SQLExecDirect(phstmt, (SQLCHAR *)metaquery, SQL_NTS);
 }
 
+SQLRETURN SQL_API SQLGetTypeInfo(SQLHSTMT hstmt, SQLSMALLINT type)
+{
+	return __SQLGetTypeInfo(hstmt, type);
+}
+
 /**
  * ODBC API.
  * SQLGetInfo returns general information about the driver and data source associated with a connection.
  * TODO Complete all necessary attributes.
  */
 
-SQLRETURN SQL_API SQLGetInfo(
+SQLRETURN __SQLGetInfo(
         SQLHDBC         hdbc,
         SQLUSMALLINT    type,
         SQLPOINTER      value_ptr,
@@ -213,11 +218,12 @@ SQLRETURN SQL_API SQLGetInfo(
     dbc_t *phdbc = (dbc_t *)hdbc;
     int minimum_length_required = -1;
     SQLRETURN ret = SQL_SUCCESS;
-    bool handled;
     int t_ret;
+    int stringprop = 1;
     char *dbver = "UNKNOWN";
+    int dbverlen = strlen(dbver);
 
-    __debug("enters method. %d", type);
+    __debug("enters method. type=%d", type);
 
     if(!hdbc)
         return SQL_INVALID_HANDLE;
@@ -231,21 +237,27 @@ SQLRETURN SQL_API SQLGetInfo(
         case SQL_DBMS_NAME:
             SET_CSTRING(value_ptr, DBNAME, buflen, minimum_length_required);
             break;
-        
+
         case SQL_DBMS_VER:
+            __debug("is dbc conncted? %d", phdbc->connected);
             if (!phdbc->connected && (ret = comdb2_SQLConnect(phdbc)) !=
                     SQL_SUCCESS)
                 return ret;
             t_ret = cdb2_run_statement(phdbc->sqlh, "SELECT COMDB2_VERSION()");
-            if (t_ret != 0)
+            if (t_ret != 0) {
+                __debug("failed to retrieve version %s", cdb2_errstr(phdbc->sqlh));
                 return set_dbc_error(phdbc, ERROR_WTH, cdb2_errstr(phdbc->sqlh), t_ret);
-            while ((t_ret = cdb2_next_record(phdbc->sqlh)) == CDB2_OK)
+            }
+            while ((t_ret = cdb2_next_record(phdbc->sqlh)) == CDB2_OK) {
                 dbver = cdb2_column_value(phdbc->sqlh, 0);
+                dbverlen = cdb2_column_size(phdbc->sqlh, 0);
+            }
             if (t_ret != CDB2_OK_DONE)
                 return set_dbc_error(phdbc, ERROR_WTH, cdb2_errstr(phdbc->sqlh), t_ret);
             SET_CSTRING(value_ptr, dbver, buflen, minimum_length_required);
+            __debug("dbver is %s (len = %d)", dbver, dbverlen);
             break;
-        
+
         case SQL_DRIVER_NAME:
             SET_CSTRING(value_ptr, DRVNAME, buflen, minimum_length_required);
             break;
@@ -256,17 +268,20 @@ SQLRETURN SQL_API SQLGetInfo(
 
         case SQL_DRIVER_ODBC_VER:
             SET_CSTRING(value_ptr, DRVODBCVER, buflen, minimum_length_required);
+            __debug("driver odbc version is (%d) %s", minimum_length_required, (SQLCHAR *)value_ptr);
+            break;
+
+        default:
+            stringprop = 0;
             break;
     }
 
-    /* If @minimum_length_required has been altered, set @handled to true. */
-    handled = (minimum_length_required != -1) ? true : false;
+    __debug("min len %d, buflen %d", minimum_length_required, buflen);
 
-    if(minimum_length_required >= buflen)
-        /* For a string attribute, if the required length exceeds @buflen, give a warning.
-           For other types, since @minimum_length_required was initialized to -1, 
-           this branch will not be executed. */
-        ret = DBC_ODBC_ERR(ERROR_STR_TRUNCATED);
+    if (stringprop) {
+        __debug("bail out for a string property");
+        goto out;
+    }
 
     /* Next deal with fixed length attributes (meaning we assume the buffer is large enough). */
     switch(type) {
@@ -308,24 +323,36 @@ SQLRETURN SQL_API SQLGetInfo(
 
         case SQL_CURSOR_COMMIT_BEHAVIOR:
         case SQL_CURSOR_ROLLBACK_BEHAVIOR:
-            SET_SQLUINT(value_ptr, SQL_CB_CLOSE, minimum_length_required);
+            SET_SQLUSMALLINT(value_ptr, SQL_CB_CLOSE, minimum_length_required);
+            break;
+
+        case SQL_GETDATA_EXTENSIONS:
+            SET_SQLUINT(value_ptr, SQL_GD_ANY_COLUMN | SQL_GD_ANY_ORDER, minimum_length_required);
             break;
 
         default:
             __debug("Unhandled type %d", type);
-            if(!handled)
-                ret = DBC_ODBC_ERR(ERROR_TYPE_OUT_OF_RANGE);
             break;
     }
 
-    if(str_len)
+out: if(str_len && stringprop)
         *str_len = (SQLSMALLINT)minimum_length_required;
 
     __debug("leaves method.");
     return ret;
 }
 
-SQLRETURN SQL_API SQLColumns(
+SQLRETURN SQL_API SQLGetInfo(
+        SQLHDBC         hdbc,
+        SQLUSMALLINT    type,
+        SQLPOINTER      value_ptr,
+        SQLSMALLINT     buflen,
+        SQLSMALLINT     *str_len)
+{
+    return __SQLGetInfo(hdbc, type, value_ptr, buflen, str_len);
+}
+
+SQLRETURN __SQLColumns(
         SQLHSTMT       hstmt,
         SQLCHAR *      catalog,
         SQLSMALLINT    catalog_len,
@@ -389,7 +416,21 @@ SQLRETURN SQL_API SQLColumns(
     return ret;
 }
 
-SQLRETURN SQL_API SQLProcedures(
+SQLRETURN SQL_API SQLColumns(
+        SQLHSTMT       hstmt,
+        SQLCHAR *      catalog,
+        SQLSMALLINT    catalog_len,
+        SQLCHAR *      schema,
+        SQLSMALLINT    schema_len,
+        SQLCHAR *      tbl,
+        SQLSMALLINT    tbl_len,
+        SQLCHAR *      column,
+        SQLSMALLINT    column_len)
+{
+    return __SQLColumns(hstmt, catalog, catalog_len, schema, schema_len, tbl, tbl_len, column, column_len);
+}
+
+SQLRETURN __SQLProcedures(
     SQLHSTMT       hstmt,
     SQLCHAR *      catalog,
     SQLSMALLINT    catalog_len,
@@ -437,7 +478,19 @@ SQLRETURN SQL_API SQLProcedures(
     return ret;
 }
 
-SQLRETURN SQL_API SQLProcedureColumns(
+SQLRETURN SQL_API SQLProcedures(
+    SQLHSTMT       hstmt,
+    SQLCHAR *      catalog,
+    SQLSMALLINT    catalog_len,
+    SQLCHAR *      schema,
+    SQLSMALLINT    schema_len,
+    SQLCHAR *      proc,
+    SQLSMALLINT    proc_len)
+{
+	return __SQLProcedures(hstmt, catalog, catalog_len, schema, schema_len, proc, proc_len);
+}
+
+SQLRETURN __SQLProcedureColumns(
     SQLHSTMT       hstmt,
     SQLCHAR *      catalog,
     SQLSMALLINT    catalog_len,
@@ -492,7 +545,21 @@ SQLRETURN SQL_API SQLProcedureColumns(
     return ret;
 }
 
-SQLRETURN SQL_API SQLColumnPrivileges(
+SQLRETURN SQL_API SQLProcedureColumns(
+    SQLHSTMT       hstmt,
+    SQLCHAR *      catalog,
+    SQLSMALLINT    catalog_len,
+    SQLCHAR *      schema,
+    SQLSMALLINT    schema_len,
+    SQLCHAR *      proc,
+    SQLSMALLINT    proc_len,
+    SQLCHAR *      column,
+    SQLSMALLINT    column_len)
+{
+	return __SQLProcedureColumns(hstmt, catalog, catalog_len, schema, schema_len, proc, proc_len, column, column_len);
+}
+
+SQLRETURN __SQLColumnPrivileges(
     SQLHSTMT       hstmt,
     SQLCHAR *      catalog,
     SQLSMALLINT    catalog_len,
@@ -536,7 +603,21 @@ SQLRETURN SQL_API SQLColumnPrivileges(
     return ret;
 }
 
-SQLRETURN SQL_API SQLTablePrivileges(
+SQLRETURN SQL_API SQLColumnPrivileges(
+    SQLHSTMT       hstmt,
+    SQLCHAR *      catalog,
+    SQLSMALLINT    catalog_len,
+    SQLCHAR *      schema,
+    SQLSMALLINT    schema_len,
+    SQLCHAR        *tbl,
+    SQLSMALLINT    tbl_len,
+    SQLCHAR *      column,
+    SQLSMALLINT    column_len)
+{
+	return __SQLColumnPrivileges(hstmt, catalog, catalog_len, schema, schema_len, tbl, tbl_len, column, column_len);
+}
+
+SQLRETURN __SQLTablePrivileges(
     SQLHSTMT       hstmt,
     SQLCHAR *      catalog,
     SQLSMALLINT    catalog_len,
@@ -575,7 +656,19 @@ SQLRETURN SQL_API SQLTablePrivileges(
     return ret;
 }
 
-SQLRETURN SQL_API SQLSpecialColumns(
+SQLRETURN SQL_API SQLTablePrivileges(
+    SQLHSTMT       hstmt,
+    SQLCHAR *      catalog,
+    SQLSMALLINT    catalog_len,
+    SQLCHAR *      schema,
+    SQLSMALLINT    schema_len,
+    SQLCHAR        *tbl,
+    SQLSMALLINT    tbl_len)
+{
+	return __SQLTablePrivileges(hstmt, catalog, catalog_len, schema, schema_len, tbl, tbl_len);
+}
+
+SQLRETURN __SQLSpecialColumns(
     SQLHSTMT       hstmt,
     SQLUSMALLINT   type,
     SQLCHAR *      catalog,
@@ -623,7 +716,22 @@ SQLRETURN SQL_API SQLSpecialColumns(
     return ret;
 }
 
-SQLRETURN SQL_API SQLPrimaryKeys(
+SQLRETURN SQL_API SQLSpecialColumns(
+    SQLHSTMT       hstmt,
+    SQLUSMALLINT   type,
+    SQLCHAR *      catalog,
+    SQLSMALLINT    catalog_len,
+    SQLCHAR *      schema,
+    SQLSMALLINT    schema_len,
+    SQLCHAR        *tbl,
+    SQLSMALLINT    tbl_len,
+    SQLUSMALLINT   scope,
+    SQLUSMALLINT   nullable)
+{
+	return __SQLSpecialColumns(hstmt, type, catalog, catalog_len, schema, schema_len, tbl, tbl_len, scope, nullable);
+}
+
+SQLRETURN __SQLPrimaryKeys(
     SQLHSTMT       hstmt,
     SQLCHAR *      catalog,
     SQLSMALLINT    catalog_len,
@@ -675,20 +783,31 @@ SQLRETURN SQL_API SQLPrimaryKeys(
     return ret;
 }
 
+SQLRETURN SQL_API SQLPrimaryKeys(
+    SQLHSTMT       hstmt,
+    SQLCHAR *      catalog,
+    SQLSMALLINT    catalog_len,
+    SQLCHAR *      schema,
+    SQLSMALLINT    schema_len,
+    SQLCHAR        *tbl,
+    SQLSMALLINT    tbl_len)
+{
+	return __SQLPrimaryKeys(hstmt, catalog, catalog_len, schema, schema_len, tbl, tbl_len);
+}
 
-SQLRETURN SQL_API SQLForeignKeys(
+SQLRETURN SQL_API __SQLForeignKeys(
     SQLHSTMT           hstmt,
-    SQLCHAR 		   *pkcat,
+    SQLCHAR            *pkcat,
     SQLSMALLINT        pkcatlen,
-    SQLCHAR 		   *pkschem,
+    SQLCHAR            *pkschem,
     SQLSMALLINT        pkschemlen,
-    SQLCHAR 		   *pktbl,
+    SQLCHAR            *pktbl,
     SQLSMALLINT        pktbllen,
-    SQLCHAR 		   *fkcat,
+    SQLCHAR            *fkcat,
     SQLSMALLINT        fkcatlen,
-    SQLCHAR 		   *fkschem,
+    SQLCHAR            *fkschem,
     SQLSMALLINT        fkschemlen,
-    SQLCHAR 		   *fktbl,
+    SQLCHAR            *fktbl,
     SQLSMALLINT        fktbllen)
 {
     SQLRETURN ret;
@@ -761,8 +880,25 @@ SQLRETURN SQL_API SQLForeignKeys(
     return ret;
 }
 
+SQLRETURN SQL_API SQLForeignKeys(
+    SQLHSTMT           hstmt,
+    SQLCHAR            *pkcat,
+    SQLSMALLINT        pkcatlen,
+    SQLCHAR            *pkschem,
+    SQLSMALLINT        pkschemlen,
+    SQLCHAR            *pktbl,
+    SQLSMALLINT        pktbllen,
+    SQLCHAR            *fkcat,
+    SQLSMALLINT        fkcatlen,
+    SQLCHAR            *fkschem,
+    SQLSMALLINT        fkschemlen,
+    SQLCHAR            *fktbl,
+    SQLSMALLINT        fktbllen)
+{
+    return __SQLForeignKeys(hstmt, pkcat, pkcatlen, pkschem, pkschemlen, pktbl, pktbllen, fkcat, fkcatlen, fkschem, fkschemlen, fktbl, fktbllen);
+}
 
-SQLRETURN SQL_API SQLStatistics(
+SQLRETURN __SQLStatistics(
     SQLHSTMT       hstmt,
     SQLCHAR *      catalog,
     SQLSMALLINT    catalog_len,
@@ -827,7 +963,21 @@ SQLRETURN SQL_API SQLStatistics(
     return ret;
 }
 
-SQLRETURN SQL_API SQLTables(
+SQLRETURN SQL_API SQLStatistics(
+    SQLHSTMT       hstmt,
+    SQLCHAR *      catalog,
+    SQLSMALLINT    catalog_len,
+    SQLCHAR *      schema,
+    SQLSMALLINT    schema_len,
+    SQLCHAR *      tbl,
+    SQLSMALLINT    tbl_len,
+    SQLUSMALLINT   unique,
+    SQLUSMALLINT   reserve)
+{
+	return __SQLStatistics(hstmt, catalog, catalog_len, schema, schema_len, tbl, tbl_len, unique, reserve);
+}
+
+SQLRETURN __SQLTables(
         SQLHSTMT       hstmt,
         SQLCHAR        *catalog,
         SQLSMALLINT    catalog_len,
@@ -889,3 +1039,21 @@ SQLRETURN SQL_API SQLTables(
     }
     return comdb2_SQLExecDirect(phstmt, (SQLCHAR *)metaquery, SQL_NTS);
 }
+
+SQLRETURN SQL_API SQLTables(
+        SQLHSTMT       hstmt,
+        SQLCHAR        *catalog,
+        SQLSMALLINT    catalog_len,
+        SQLCHAR        *schema,
+        SQLSMALLINT    schema_len,
+        SQLCHAR        *tbl,
+        SQLSMALLINT    tbl_len,
+        SQLCHAR        *tbl_tp,
+        SQLSMALLINT    tbl_tp_len)
+{
+	return __SQLTables(hstmt, catalog, catalog_len, schema, schema_len, tbl, tbl_len, tbl_tp, tbl_tp_len);
+}
+
+#ifdef __UNICODE__
+#include "metaw.c"
+#endif

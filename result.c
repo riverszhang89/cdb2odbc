@@ -313,15 +313,16 @@ static unsigned int display_size(cdb2_hndl_tp *sqlh, int col)
    SQLDescribeCol returns the result descriptor . column name,type, column size, decimal digits, and nullability . for one column in the result set.
    FIXME At this moment, the information is unavailable in IRD.
  */
-SQLRETURN SQL_API SQLDescribeCol(SQLHSTMT       hstmt,
-                                 SQLUSMALLINT   col,
-                                 SQLCHAR        *col_name,
-                                 SQLSMALLINT    col_name_max,
-                                 SQLSMALLINT    *col_name_len,
-                                 SQLSMALLINT    *sql_data_type,
-                                 SQLULEN        *col_size,
-                                 SQLSMALLINT    *decimal_digits,
-                                 SQLSMALLINT    *nullable)
+SQLRETURN __SQLDescribeCol(
+        SQLHSTMT       hstmt,
+        SQLUSMALLINT   col,
+        SQLCHAR        *col_name,
+        SQLSMALLINT    col_name_max,
+        SQLSMALLINT    *col_name_len,
+        SQLSMALLINT    *sql_data_type,
+        SQLULEN        *col_size,
+        SQLSMALLINT    *decimal_digits,
+        SQLSMALLINT    *nullable)
 {
     stmt_t *phstmt = (stmt_t *)hstmt;
     SQLRETURN ret;
@@ -354,8 +355,6 @@ SQLRETURN SQL_API SQLDescribeCol(SQLHSTMT       hstmt,
         *col_name_len = (SQLSMALLINT)strlen(_column_name);
     if(col_name)
         my_strncpy_out_fn((char *)col_name, _column_name, col_name_max);
-    if((SQLSMALLINT)strlen(_column_name) >= col_name_max)
-        STMT_ODBC_ERR(ERROR_STR_TRUNCATED);
 
     /* SQL data type */
     cdb2_type = cdb2_column_type(sqlh, col);
@@ -387,6 +386,18 @@ SQLRETURN SQL_API SQLDescribeCol(SQLHSTMT       hstmt,
     return SQL_SUCCESS;
 }
 
+SQLRETURN SQL_API SQLDescribeCol(SQLHSTMT       hstmt,
+                                 SQLUSMALLINT   col,
+                                 SQLCHAR        *col_name,
+                                 SQLSMALLINT    col_name_max,
+                                 SQLSMALLINT    *col_name_len,
+                                 SQLSMALLINT    *sql_data_type,
+                                 SQLULEN        *col_size,
+                                 SQLSMALLINT    *decimal_digits,
+                                 SQLSMALLINT    *nullable)
+{
+    return __SQLDescribeCol(hstmt, col, col_name, col_name_max, col_name_len, sql_data_type, col_size, decimal_digits, nullable);
+}
 
 /*
    ODBC API.
@@ -396,13 +407,14 @@ SQLRETURN SQL_API SQLDescribeCol(SQLHSTMT       hstmt,
    FIXME Currently, only SQL_DESC_LABEL is supported (I implement this function for testing the driver using unixODBC shell).
    Applications should use SQLDescribeCol instead.
  */
-SQLRETURN SQL_API SQLColAttribute(SQLHSTMT      hstmt, 
-                                  SQLUSMALLINT  col, 
-                                  SQLUSMALLINT  field, 
-                                  SQLPOINTER    text_attr, 
-                                  SQLSMALLINT   attr_max, 
-                                  SQLSMALLINT   *attr_len, 
-                                  SQLLEN        *num_attr)
+SQLRETURN __SQLColAttribute(
+        SQLHSTMT      hstmt, 
+        SQLUSMALLINT  col, 
+        SQLUSMALLINT  field, 
+        SQLPOINTER    text_attr, 
+        SQLSMALLINT   attr_max, 
+        SQLSMALLINT   *attr_len, 
+        SQLLEN        *num_attr)
 {
     stmt_t *phstmt = (stmt_t *)hstmt;
     SQLRETURN ret;
@@ -528,6 +540,17 @@ SQLRETURN SQL_API SQLColAttribute(SQLHSTMT      hstmt,
     return SQL_SUCCESS;
 }
 
+SQLRETURN SQL_API SQLColAttribute(SQLHSTMT      hstmt, 
+                                  SQLUSMALLINT  col, 
+                                  SQLUSMALLINT  field, 
+                                  SQLPOINTER    text_attr, 
+                                  SQLSMALLINT   attr_max, 
+                                  SQLSMALLINT   *attr_len, 
+                                  SQLLEN        *num_attr)
+{
+    return __SQLColAttribute(hstmt, col, field, text_attr, attr_max, attr_len, num_attr);
+}
+
 /*
    ODBC API.
    SQLNumResultCols returns the number of columns in a result set.
@@ -612,3 +635,7 @@ SQLRETURN SQL_API SQLMoreResults(SQLHSTMT hstmt)
 {
     return hstmt ? SQL_NO_DATA : SQL_INVALID_HANDLE;
 }
+
+#ifdef __UNICODE__
+#include "resultw.c"
+#endif

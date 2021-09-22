@@ -43,7 +43,7 @@ static struct {
     0x5443454c4553ULL
 #elif BYTE_ORDER == BIG_ENDIAN
     0x53454c4543540000ULL
-		fdas
+        fdas
 #endif  
     },
     {STMT_INSERT, "INSERT", 
@@ -206,9 +206,14 @@ SQLRETURN comdb2_SQLPrepare(stmt_t *phstmt, SQLCHAR *str, SQLINTEGER str_len)
     return SQL_SUCCESS;
 }
 
-SQLRETURN SQL_API SQLPrepare(SQLHSTMT hstmt, SQLCHAR *str, SQLINTEGER str_len)
+SQLRETURN __SQLPrepare(SQLHSTMT hstmt, SQLCHAR *str, SQLINTEGER str_len)
 {
     return comdb2_SQLPrepare((stmt_t *)hstmt, str, str_len);
+}
+
+SQLRETURN SQL_API SQLPrepare(SQLHSTMT hstmt, SQLCHAR *str, SQLINTEGER str_len)
+{
+    return __SQLPrepare((stmt_t *)hstmt, str, str_len);
 }
 
 /**
@@ -492,7 +497,7 @@ SQLRETURN comdb2_SQLExecute(stmt_t *phstmt)
 
     if(phstmt->num_data_buffers > 0 && (data = phstmt->buffers) != NULL) {
         types = malloc(phstmt->num_data_buffers);
-		if (types == NULL)
+        if (types == NULL)
             return STMT_ODBC_ERR(ERROR_MEM_ALLOC_FAIL);
         for(i = 0; i != phstmt->num_data_buffers; ++i) {
             if(data->used)
@@ -514,7 +519,7 @@ SQLRETURN comdb2_SQLExecute(stmt_t *phstmt)
     /* TODO It makes more sense in multithreaded code. */
     SET_EXECUTING(phstmt);
     rc = cdb2_run_statement_typed(sqlh, actual_query, phstmt->num_data_buffers, types);
-	free(types);
+    free(types);
     if(rc) {
         /* Set status to extracted to prevent applications from calling SQLFetch 
            (may cause CDB2API stuck in an infinite loop). */
@@ -559,11 +564,19 @@ SQLRETURN comdb2_SQLExecDirect(
     return ret;
 }
 
+SQLRETURN __SQLExecDirect(
+        SQLHSTMT        hstmt,
+        SQLCHAR         *sql,
+        SQLINTEGER      len)
+{
+    return comdb2_SQLExecDirect((stmt_t *)hstmt, sql, len);
+}
+
 SQLRETURN SQL_API SQLExecDirect(SQLHSTMT        hstmt,
                                 SQLCHAR         *sql,
                                 SQLINTEGER      len)
 {
-    return comdb2_SQLExecDirect((stmt_t *)hstmt, sql, len);
+    return __SQLExecDirect((stmt_t *)hstmt, sql, len);
 }
 
 SQLRETURN SQL_API SQLNumParams(
@@ -609,7 +622,7 @@ SQLRETURN SQL_API SQLBindParameter(SQLHSTMT         hstmt,
         return STMT_ODBC_ERR_MSG(ERROR_NOT_IMPL, "Data-at-Execution is not supported.");
 
     phstmt->changed = true;
-	params = phstmt->params;
+    params = phstmt->params;
 
     if(param_num > phstmt->params_allocated) {
         /* Realloc an array of new length. */
@@ -682,10 +695,12 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT       hstmt,
     
     __debug("enters method.");
 
-    if(!hstmt)
+    __debug("c_type is %d", c_type);
+
+    if (hstmt == NULL)
         return SQL_INVALID_HANDLE;
     
-	data_list = phstmt->buffers;
+    data_list = phstmt->buffers;
     if(col > phstmt->num_data_buffers) {
         data_list = (data_buffer_t *)realloc(phstmt->buffers, col * sizeof(data_buffer_t));
         if(!data_list)
@@ -704,9 +719,9 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT       hstmt,
     data->buffer_length = target_len;
     data->required = strlen_or_ind;
     data->buffer = target_ptr;
-	/* @target_ptr serves as a flag to determine if the column needs to be unbinded.
-	   See http://msdn.microsoft.com/en-us/library/ms711010(v=vs.85).aspx for details. */
-	data->used = target_ptr ? 1 : 0;
+    /* @target_ptr serves as a flag to determine if the column needs to be unbinded.
+       See http://msdn.microsoft.com/en-us/library/ms711010(v=vs.85).aspx for details. */
+    data->used = target_ptr ? 1 : 0;
 
     __debug("leaves method.");
 
@@ -800,3 +815,7 @@ SQLRETURN SQL_API SQLTransact(
     return ( hdbc ? comdb2_SQLEndTran(SQL_HANDLE_DBC, hdbc, commit_or_rollback)
             : comdb2_SQLEndTran(SQL_HANDLE_ENV, henv, commit_or_rollback) );
 }
+
+#ifdef __UNICODE__
+#include "executew.c"
+#endif

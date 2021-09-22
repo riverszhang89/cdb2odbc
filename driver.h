@@ -40,6 +40,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <wchar.h>
+//#include <drivermanager.h>
 
 /* Define it before #include <sql.h> */
 #define ODBCVER         0x0350
