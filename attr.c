@@ -51,9 +51,6 @@ static SQLRETURN comdb2_SQLSetConnectAttr(
             phdbc->txn_isolation = (int)(intptr_t)buf;
             phdbc->txn_changed = true;
             break;
-
-        default:
-            return DBC_ODBC_ERR(ERROR_UNIMPL_ATTR);
     }
 
     __debug("leaves method.");
