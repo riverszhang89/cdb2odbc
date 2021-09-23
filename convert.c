@@ -452,8 +452,8 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
             break;
 
         case SQL_C_WCHAR:
-            mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t) - 1);
-            *str_len = size - 1;
+            mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t));
+            *str_len = wcslen(target_ptr);
             if(size > target_len)
                 resp = CONV_TRUNCATED;
             break;
