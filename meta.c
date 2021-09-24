@@ -889,3 +889,5 @@ SQLRETURN SQL_API SQLTables(
     }
     return comdb2_SQLExecDirect(phstmt, (SQLCHAR *)metaquery, SQL_NTS);
 }
+
+#include "metaw.c"

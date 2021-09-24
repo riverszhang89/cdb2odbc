@@ -117,7 +117,7 @@ SQLRETURN SQL_API SQLGetFunctions(
     __debug("enters method.");
 
     if (func == SQL_API_ODBC3_ALL_FUNCTIONS) {
-            memset(supported, 0xFF, sizeof(SQLUSMALLINT) * SQL_API_ODBC3_ALL_FUNCTIONS_SIZE);
+            memset(supported, 0xFF, sizeof(SQLSMALLINT) * SQL_API_ODBC3_ALL_FUNCTIONS_SIZE);
             SQL_FUNC_SET(supported, SQL_API_SQLBINDCOL);
             SQL_FUNC_SET(supported, SQL_API_SQLCOLATTRIBUTE);
             SQL_FUNC_SET(supported, SQL_API_SQLCONNECT);

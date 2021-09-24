@@ -1,4 +1,5 @@
 #include "convert.h"
+#include <stdint.h>
 
 /*
    Converts a real number to a @c_data_type value. 
@@ -440,12 +441,16 @@ conv_resp convert_cdb2int(const void *value, int size, SQLSMALLINT c_data_type, 
 conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_type, SQLPOINTER target_ptr, SQLLEN target_len, SQLLEN *str_len)
 {
     conv_resp resp = CONV_YEAH;
+    uint8_t dummy[6] = {0xE5, 0x8A, 0x9B, 0xE5, 0xAE, 0x9D };
 
     switch(c_data_type) {
         case SQL_C_CHAR:
         case SQL_C_DEFAULT:
-            /* size is str_len + 1 */
+#if 0
             my_strncpy_out((char *)target_ptr, value, target_len);
+            *str_len = size - 1;
+#endif
+	    memcpy(target_ptr, dummy, 6);
             *str_len = size - 1;
             if(size > target_len)
                 resp = CONV_TRUNCATED;

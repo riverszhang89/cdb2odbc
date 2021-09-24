@@ -800,3 +800,5 @@ SQLRETURN SQL_API SQLTransact(
     return ( hdbc ? comdb2_SQLEndTran(SQL_HANDLE_DBC, hdbc, commit_or_rollback)
             : comdb2_SQLEndTran(SQL_HANDLE_ENV, henv, commit_or_rollback) );
 }
+
+#include "executew.c"

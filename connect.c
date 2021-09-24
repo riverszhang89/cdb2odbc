@@ -206,3 +206,5 @@ SQLRETURN SQL_API SQLDisconnect(SQLHDBC hdbc)
 
     return SQL_SUCCESS;
 }
+
+#include "connectw.c"

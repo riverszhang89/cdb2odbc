@@ -53,3 +53,7 @@ SQLTables @50
 SQLTransact @51
 ConfigDriver @52
 ConfigDSN @53
+SQLConnectW @54
+SQLDriverConnectW @55
+SQLGetInfoW @56
+SQLExecDirectW @57
