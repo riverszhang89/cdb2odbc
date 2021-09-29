@@ -45,21 +45,23 @@ SQLRETURN SQL_API SQLDriverConnectW(
         SQLUSMALLINT    drv_completion)
 {
     SQLRETURN ret;
+    SQLCHAR inansi[MAX_CONN_INFO_LEN];
 
-    SQLCHAR *inansi;
-    int len = wcstombs(NULL, in_conn_str, 0);
-    inansi = calloc(len + 1, sizeof(SQLCHAR));
-    wcstombs(inansi, in_conn_str, len + 1);
+    int len = WideCharToMultiByte(CP_ACP, 0, in_conn_str, -1, inansi, MAX_CONN_INFO_LEN, NULL, NULL);
+
+    if (len <= 0)
+	return SQL_ERROR;
 
     SQLCHAR outansi[MAX_CONN_INFO_LEN];
     SQLSMALLINT outputlen;
 
     ret = SQLDriverConnect(hdbc, hwnd, inansi, len, outansi, MAX_CONN_INFO_LEN, &outputlen, drv_completion);
 
-    SQLSMALLINT wcslen = mbstowcs(out_conn_str, outansi, (out_conn_str_max == SQL_NTS) ? MAX_CONN_INFO_LEN : out_conn_str_max);
-    if (out_conn_strlen)
-        *out_conn_strlen = wcslen * sizeof(SQLWCHAR);
+    if (ret == SQL_SUCCESS) {
+	len = MultiByteToWideChar(CP_UTF8, 0, outansi, MAX_CONN_INFO_LEN, out_conn_str, out_conn_str_max);
+	if (len > 0 && out_conn_strlen)
+	    *out_conn_strlen = len;
+    }
 
-    free(inansi);
     return ret;
 }

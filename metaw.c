@@ -5,21 +5,28 @@ SQLRETURN SQL_API SQLGetInfoW(
         SQLSMALLINT     buflen,
         SQLSMALLINT     *str_len)
 {
+    int len = 2;
+    SQLSMALLINT ansistrlen;
     SQLPOINTER *val = malloc(buflen);
-    SQLRETURN ret = SQLGetInfo(hdbc, type, val, buflen, str_len);
 
-    switch (type) {
-        case SQL_DATABASE_NAME:
-        case SQL_DBMS_NAME:
-        case SQL_DBMS_VER:
-        case SQL_DRIVER_NAME:
-        case SQL_DRIVER_VER:
-        case SQL_DRIVER_ODBC_VER:
-            mbstowcs(value_ptr, (const char *)val, str_len + 1);
-            if (str_len)
-                *str_len *= sizeof(SQLWCHAR);
-            break;
+#if 0
+    SQLRETURN ret = SQLGetInfo(hdbc, type, val, buflen, &ansistrlen);
+
+    if (ret == SQL_SUCCESS) {
+       switch (type) {
+       case SQL_DATABASE_NAME:
+       case SQL_DBMS_NAME:
+       case SQL_DBMS_VER:
+       case SQL_DRIVER_NAME:
+       case SQL_DRIVER_VER:
+       case SQL_DRIVER_ODBC_VER:
+           len = MultiByteToWideChar(CP_UTF8, 0, (SQLCHAR *)val, ansistrlen, (SQLWCHAR *)value_ptr, buflen / sizeof(SQLWCHAR));
+           if (len > 0)
+               *str_len = len * sizeof(SQLWCHAR);
+           break;
+       }
     }
+#endif
     free(val);
-    return ret;
+    return 0;
 }
