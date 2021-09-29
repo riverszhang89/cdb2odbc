@@ -1,3 +1,5 @@
+#include <stringapiset.h>
+
 SQLRETURN SQL_API SQLConnectW(
         SQLHDBC         hdbc,
         SQLWCHAR        *dsn,
@@ -7,18 +9,27 @@ SQLRETURN SQL_API SQLConnectW(
         SQLWCHAR        *auth,
         SQLSMALLINT     auth_len)
 {
-    SQLCHAR *dsn_ansi;
+    SQLCHAR *dsn_ansi, *uid_ansi, *auth_ansi;
+    int len;
     SQLRETURN ret;
 
     __debug("enters method.");
 
-    int len = wcstombs(NULL, dsn, 0);
+    len = wcstombs(NULL, dsn, 0);
     dsn_ansi = calloc(len + 1, sizeof(SQLCHAR));
     wcstombs(dsn_ansi, dsn, len + 1);
 
+    len = wcstombs(NULL, uid, 0);
+    uid_ansi = calloc(len + 1, sizeof(SQLCHAR));
+    wcstombs(uid_ansi, uid, len + 1);
+
+    len = wcstombs(NULL, auth, 0);
+    auth_ansi = calloc(len + 1, sizeof(SQLCHAR));
+    wcstombs(auth_ansi, uid, len + 1);
+
     __info("Connecting to %s.", dsn_ansi);
 
-    ret = SQLConnect(hdbc, dsn_ansi, SQL_NTS, uid, uid_len, auth, auth_len);
+    ret = SQLConnect(hdbc, dsn_ansi, SQL_NTS, uid_ansi, uid_len, auth_ansi, auth_len);
     free(dsn_ansi);
     return ret;
 }

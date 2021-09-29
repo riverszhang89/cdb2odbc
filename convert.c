@@ -442,16 +442,24 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
 {
     conv_resp resp = CONV_YEAH;
     uint8_t dummy[6] = {0xE5, 0x8A, 0x9B, 0xE5, 0xAE, 0x9D };
+    wchar_t *wcs;
+    int mbslen;
 
     switch(c_data_type) {
         case SQL_C_CHAR:
         case SQL_C_DEFAULT:
-#if 0
+            mbslen = mbstowcs(NULL, value, 0);
+            wcs = calloc(mbslen + 1, sizeof(wcs));
+            mbstowcs(wcs, value, mbslen + 1);
+            memcpy(target_ptr, wcs, (mbslen + 1) * sizeof(wcs));
+            *str_len = (mbslen + 1) * sizeof(wcs);
             my_strncpy_out((char *)target_ptr, value, target_len);
             *str_len = size - 1;
+#if 0
+            mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t));
+	    //memcpy(target_ptr, dummy, 6);
+            *str_len = wcslen(target_ptr);
 #endif
-	    memcpy(target_ptr, dummy, 6);
-            *str_len = size - 1;
             if(size > target_len)
                 resp = CONV_TRUNCATED;
             break;
