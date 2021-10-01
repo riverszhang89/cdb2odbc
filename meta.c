@@ -215,6 +215,7 @@ SQLRETURN SQL_API SQLGetInfo(
     SQLRETURN ret = SQL_SUCCESS;
     bool handled;
     int t_ret;
+    int stringprop = 1;
     char *dbver = "UNKNOWN";
 
     __debug("enters method. %d", type);
@@ -257,6 +258,10 @@ SQLRETURN SQL_API SQLGetInfo(
         case SQL_DRIVER_ODBC_VER:
             SET_CSTRING(value_ptr, DRVODBCVER, buflen, minimum_length_required);
             break;
+
+	default:
+	    stringprop = 0;
+	    break;
     }
 
     /* If @minimum_length_required has been altered, set @handled to true. */
@@ -267,6 +272,11 @@ SQLRETURN SQL_API SQLGetInfo(
            For other types, since @minimum_length_required was initialized to -1, 
            this branch will not be executed. */
         ret = DBC_ODBC_ERR(ERROR_STR_TRUNCATED);
+
+    if (stringprop) {
+        __debug("bail out for a string property");
+        goto out;
+    }
 
     /* Next deal with fixed length attributes (meaning we assume the buffer is large enough). */
     switch(type) {
@@ -311,6 +321,10 @@ SQLRETURN SQL_API SQLGetInfo(
             SET_SQLUSMALLINT(value_ptr, SQL_CB_CLOSE, minimum_length_required);
             break;
 
+        case SQL_GETDATA_EXTENSIONS:
+            SET_SQLUINT(value_ptr, SQL_GD_ANY_COLUMN | SQL_GD_ANY_ORDER, minimum_length_required);
+            break;
+
         default:
             __debug("Unhandled type %d", type);
             if(!handled)
@@ -318,7 +332,7 @@ SQLRETURN SQL_API SQLGetInfo(
             break;
     }
 
-    if(str_len)
+out: if(str_len)
         *str_len = (SQLSMALLINT)minimum_length_required;
 
     __debug("leaves method.");

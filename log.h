@@ -46,7 +46,7 @@
 # else
 #  define LOG_LVL LOG_W
 # endif
- 
+
 # define __log(lvl, flag, fmt, ...) do {   \
      if(lvl >= LOG_LVL) {   \
          printf("[COMDB2-ODBC][%s" NRM "][" \

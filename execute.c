@@ -682,6 +682,8 @@ SQLRETURN SQL_API SQLBindCol(SQLHSTMT       hstmt,
     
     __debug("enters method.");
 
+    __debug("c_type is %d", c_type);
+
     if(!hstmt)
         return SQL_INVALID_HANDLE;
     

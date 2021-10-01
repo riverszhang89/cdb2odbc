@@ -19,6 +19,8 @@ SQLRETURN comdb2_SQLConnect(dbc_t *phdbc)
     if(ci->database[0] == '\0' || ci->cluster[0] == '\0') 
         return DBC_ODBC_ERR(ERROR_NO_CONF);
 
+    __debug("cdb2_open(%s, %s)\n", ci->database, ci->cluster);
+
     if((rc = cdb2_open(&sqlh, ci->database, ci->cluster, ci->flag)) != 0)
         return set_dbc_error(phdbc, ERROR_UNABLE_TO_CONN, NULL, rc);
 
@@ -164,7 +166,7 @@ SQLRETURN SQL_API SQLDriverConnect(
     if(SQL_FAILED(comdb2_SQLConnect(phdbc)))
         return SQL_ERROR;
 
-    snprintf(_outstr, MAX_CONN_INFO_LEN, "dsn=%s;driver=%s;database=%s;cluster=%s;flag=%d.", 
+    snprintf(_outstr, MAX_CONN_INFO_LEN, "dsn=%s;driver=%s;database=%s;cluster=%s;flag=%d", 
             ci->dsn, ci->driver, ci->database, ci->cluster, ci->flag);
 
     if(out_conn_str)

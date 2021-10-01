@@ -444,30 +444,21 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
     uint8_t dummy[6] = {0xE5, 0x8A, 0x9B, 0xE5, 0xAE, 0x9D };
     wchar_t *wcs;
     int mbslen;
+    int len;
 
     switch(c_data_type) {
         case SQL_C_CHAR:
         case SQL_C_DEFAULT:
-            mbslen = mbstowcs(NULL, value, 0);
-            wcs = calloc(mbslen + 1, sizeof(wcs));
-            mbstowcs(wcs, value, mbslen + 1);
-            memcpy(target_ptr, wcs, (mbslen + 1) * sizeof(wcs));
-            *str_len = (mbslen + 1) * sizeof(wcs);
             my_strncpy_out((char *)target_ptr, value, target_len);
             *str_len = size - 1;
-#if 0
-            mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t));
-	    //memcpy(target_ptr, dummy, 6);
-            *str_len = wcslen(target_ptr);
-#endif
             if(size > target_len)
                 resp = CONV_TRUNCATED;
             break;
 
         case SQL_C_WCHAR:
-            mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t));
-            *str_len = wcslen(target_ptr);
-            if(size > target_len)
+            len = MultiByteToWideChar(CP_UTF8, 0, value, -1, target_ptr, target_len / sizeof(wchar_t));
+            *str_len = len * sizeof(wchar_t);
+            if(size > (target_len / sizeof(wchar_t)))
                 resp = CONV_TRUNCATED;
             break;
         default:

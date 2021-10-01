@@ -57,3 +57,5 @@ SQLConnectW @54
 SQLDriverConnectW @55
 SQLGetInfoW @56
 SQLExecDirectW @57
+SQLDescribeColW @58
+SQLColAttributeW @59
