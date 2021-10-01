@@ -267,7 +267,9 @@ SQLRETURN SQL_API SQLGetInfo(
     /* If @minimum_length_required has been altered, set @handled to true. */
     handled = (minimum_length_required != -1) ? true : false;
 
-    if(minimum_length_required >= buflen)
+    __debug("min len %d, buflen %d", minimum_length_required, buflen);
+
+    if(minimum_length_required > buflen)
         /* For a string attribute, if the required length exceeds @buflen, give a warning.
            For other types, since @minimum_length_required was initialized to -1, 
            this branch will not be executed. */
@@ -335,7 +337,7 @@ SQLRETURN SQL_API SQLGetInfo(
 out: if(str_len)
         *str_len = (SQLSMALLINT)minimum_length_required;
 
-    __debug("leaves method.");
+    __debug("leaves method rc %d.", ret);
     return ret;
 }
 
@@ -904,4 +906,6 @@ SQLRETURN SQL_API SQLTables(
     return comdb2_SQLExecDirect(phstmt, (SQLCHAR *)metaquery, SQL_NTS);
 }
 
+#ifdef __WIN_UNICODE__
 #include "metaw.c"
+#endif

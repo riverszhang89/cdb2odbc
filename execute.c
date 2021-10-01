@@ -803,4 +803,6 @@ SQLRETURN SQL_API SQLTransact(
             : comdb2_SQLEndTran(SQL_HANDLE_ENV, henv, commit_or_rollback) );
 }
 
+#ifdef __WIN_UNICODE__
 #include "executew.c"
+#endif

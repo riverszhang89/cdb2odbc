@@ -613,4 +613,6 @@ SQLRETURN SQL_API SQLMoreResults(SQLHSTMT hstmt)
     return hstmt ? SQL_NO_DATA : SQL_INVALID_HANDLE;
 }
 
+#ifdef __WIN_UNICODE__
 #include "resultw.c"
+#endif

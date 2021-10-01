@@ -19,7 +19,7 @@ SQLRETURN comdb2_SQLConnect(dbc_t *phdbc)
     if(ci->database[0] == '\0' || ci->cluster[0] == '\0') 
         return DBC_ODBC_ERR(ERROR_NO_CONF);
 
-    __debug("cdb2_open(%s, %s)\n", ci->database, ci->cluster);
+    __debug("cdb2_open(%s, %s)", ci->database, ci->cluster);
 
     if((rc = cdb2_open(&sqlh, ci->database, ci->cluster, ci->flag)) != 0)
         return set_dbc_error(phdbc, ERROR_UNABLE_TO_CONN, NULL, rc);
@@ -209,4 +209,6 @@ SQLRETURN SQL_API SQLDisconnect(SQLHDBC hdbc)
     return SQL_SUCCESS;
 }
 
+#ifdef __WIN_UNICODE__
 #include "connectw.c"
+#endif

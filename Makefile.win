@@ -23,7 +23,7 @@
 
 # Build with optimization unless instructed otherwise.
 !IFNDEF CONFIG
-CONFIG=Debug
+CONFIG=Release
 !ENDIF
 
 # Build with SSL support unless instructed otherwise.
@@ -60,7 +60,7 @@ _MSC_VER=1900
 
 CC=cl.exe
 CFLAGS=/nologo $(CFLAG_CFG) $(CFLAGS_INC) $(CFLAGS_DEF) /c
-CFLAGS_DEF=-D__DEBUG__ -D__LOG__
+CFLAGS_DEF=-D__WIN_UNICODE__ -D__DEBUG__ -D__LOG__
 
 !IF $(WITH_SSL) == 0
 CFLAGS_DEF=$(CFLAGS_DEF) /DWITH_SSL=0
@@ -153,7 +153,6 @@ ALL: "$(DLL)" "$(LIBNAME)"
 
 CLEAN:
 	-@ERASE /Q *.obj
-	-@ERASE /Q *.dll
 	-@ERASE /Q *.lib
 	-@ERASE /Q *.exp
 	-@ERASE /Q *.exe

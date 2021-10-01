@@ -24,7 +24,7 @@ SQLRETURN SQL_API SQLGetInfoW(
 	writablelen = buflen / sizeof(SQLWCHAR) - 1;
 	break;
     default:
-	val = malloc(buflen);
+	val = value_ptr;
 	writablelen = buflen;
 	break;
     }
@@ -48,11 +48,10 @@ SQLRETURN SQL_API SQLGetInfoW(
                             writablelen + 1);
             if (len > 0 && str_len != NULL)
                 *str_len = wcslen((SQLWCHAR *)val) *  sizeof(SQLWCHAR);
+	    free(val);
             break;
         }
     }
-
-    free(val);
 
     __debug("leaves method.");
     return 0;

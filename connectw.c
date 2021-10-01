@@ -15,35 +15,37 @@ SQLRETURN SQL_API SQLConnectW(
 
     __debug("enters method.");
 
-
-
+    /* dsn */
     needed = WideCharToMultiByte(CP_UTF8, 0, dsn, -1, NULL, 0, NULL, NULL);
     if (needed <= 0)
         return SQL_ERROR;
 
     dsn_ansi = calloc(needed + 1, sizeof(SQLCHAR));
-    WideCharToMultiByte(CP_UTF8, 0, dsn, len, dsn_ansi, needed + 1, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, dsn, dsn_len, dsn_ansi, needed + 1, NULL, NULL);
 
-
+    /* uid */
     needed = WideCharToMultiByte(CP_UTF8, 0, uid, -1, NULL, 0, NULL, NULL);
     if (needed <= 0)
         return SQL_ERROR;
 
     uid_ansi = calloc(needed + 1, sizeof(SQLCHAR));
-    WideCharToMultiByte(CP_UTF8, 0, uid, len, uid_ansi, needed + 1, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, uid, uid_len, uid_ansi, needed + 1, NULL, NULL);
 
-
+    /* auth */
     needed = WideCharToMultiByte(CP_UTF8, 0, auth, -1, NULL, 0, NULL, NULL);
     if (needed <= 0)
         return SQL_ERROR;
 
     auth_ansi = calloc(needed + 1, sizeof(SQLCHAR));
-    WideCharToMultiByte(CP_UTF8, 0, auth, len, auth_ansi, needed + 1, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, auth, auth_len, auth_ansi, needed + 1, NULL, NULL);
 
     __info("Connecting to %s.", dsn_ansi);
 
+    /* call the ANSI version. */
     ret = SQLConnect(hdbc, dsn_ansi, SQL_NTS, uid_ansi, uid_len, auth_ansi, auth_len);
     free(dsn_ansi);
+    free(uid_ansi);
+    free(auth_ansi);
 
     __debug("leaves method.");
     return ret;
