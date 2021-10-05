@@ -14,7 +14,7 @@ SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT        hstmt,
         return SQL_ERROR;
 
     sqlansi = malloc(needed + 1);
-    WideCharToMultiByte(CP_UTF8, 0, sql, len, sqlansi, needed + 1, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, sql, -1, sqlansi, needed + 1, NULL, NULL);
 
     ret = SQLExecDirect(hstmt, sqlansi, needed);
 

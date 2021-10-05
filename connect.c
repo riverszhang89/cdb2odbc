@@ -15,9 +15,12 @@ SQLRETURN comdb2_SQLConnect(dbc_t *phdbc)
     cdb2_hndl_tp *sqlh;
     conn_info_t *ci = &phdbc->ci;
     int rc;
+    __debug("enters method");
 
-    if(ci->database[0] == '\0' || ci->cluster[0] == '\0') 
+    if(ci->database[0] == '\0' || ci->cluster[0] == '\0') {
+	__debug("incomplete database information db %s cluster %s", ci->database, ci->cluster);
         return DBC_ODBC_ERR(ERROR_NO_CONF);
+    }
 
     __debug("cdb2_open(%s, %s)", ci->database, ci->cluster);
 
@@ -28,6 +31,7 @@ SQLRETURN comdb2_SQLConnect(dbc_t *phdbc)
     phdbc->sqlh_status = SQLH_IDLE;
     phdbc->connected = true;
 
+    __debug("leaves method");
     return SQL_SUCCESS;
 }
 
@@ -135,6 +139,8 @@ SQLRETURN SQL_API SQLDriverConnect(
     char _instr[MAX_CONN_INFO_LEN];
     char _outstr[MAX_CONN_INFO_LEN];
     conn_info_t *ci;
+
+    printf("my dbc is %p\n", hdbc);
 
     __debug("enters method.");
 

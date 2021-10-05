@@ -59,3 +59,4 @@ SQLGetInfoW @56
 SQLExecDirectW @57
 SQLDescribeColW @58
 SQLColAttributeW @59
+SQLSetEnvAttr @60

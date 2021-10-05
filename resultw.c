@@ -39,7 +39,7 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT      hstmt,
 {
     int len = 0;
     SQLSMALLINT attr_len_ansi;
-    SQLPOINTER *text_ansi = malloc(attr_max + 1);
+    SQLPOINTER text_ansi = malloc(attr_max + 1);
 
     __debug("enters method.");
     SQLRETURN ret = SQLColAttribute(hstmt, col, field, text_ansi, attr_max, &attr_len_ansi, num_attr);

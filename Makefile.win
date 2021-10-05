@@ -23,7 +23,7 @@
 
 # Build with optimization unless instructed otherwise.
 !IFNDEF CONFIG
-CONFIG=Release
+CONFIG=Debug
 !ENDIF
 
 # Build with SSL support unless instructed otherwise.
@@ -128,7 +128,8 @@ OBJECTS=attr.obj        \
         meta.obj        \
         result.obj      \
         setup.obj       \
-        util.obj
+        util.obj	\
+	env.obj
 
 ############################ TARGETS ##########################
 

@@ -10,7 +10,7 @@ SQLRETURN SQL_API SQLGetInfoW(
 {
     int len = 0;
     SQLSMALLINT ansistrlen, writablelen;
-    SQLPOINTER *val;
+    SQLPOINTER val;
     __debug("enters method.");
 
     switch (type) {
@@ -20,8 +20,8 @@ SQLRETURN SQL_API SQLGetInfoW(
     case SQL_DRIVER_NAME:
     case SQL_DRIVER_VER:
     case SQL_DRIVER_ODBC_VER:
-	val = malloc(buflen / sizeof(SQLWCHAR));
-	writablelen = buflen / sizeof(SQLWCHAR) - 1;
+	val = malloc(buflen / sizeof(SQLWCHAR) + 10);
+	writablelen = buflen / sizeof(SQLWCHAR);
 	break;
     default:
 	val = value_ptr;
@@ -43,16 +43,18 @@ SQLRETURN SQL_API SQLGetInfoW(
                             CP_UTF8,
                             0,
                             (SQLCHAR *)val,
-                            ansistrlen,
+                            -1,
                             value_ptr,
-                            writablelen + 1);
+                            writablelen);
             if (len > 0 && str_len != NULL)
-                *str_len = wcslen((SQLWCHAR *)val) *  sizeof(SQLWCHAR);
+                *str_len = (len - 1) *  sizeof(SQLWCHAR);
 	    free(val);
             break;
+	default:
+	    break;
         }
     }
 
     __debug("leaves method.");
-    return 0;
+    return SQL_SUCCESS;
 }

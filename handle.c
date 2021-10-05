@@ -439,14 +439,17 @@ SQLRETURN SQL_API SQLAllocHandle(
     
     switch(HandleType) {
         case SQL_HANDLE_ENV:
+	    __debug("what the fuck?????");
             ret = comdb2_SQLAllocEnv(OutputHandlePtr);
             break;
 
         case SQL_HANDLE_DBC:
+	    __debug("what the fuck?????");
             ret = comdb2_SQLAllocConnect(InputHandle, OutputHandlePtr);
             break;
 
         case SQL_HANDLE_STMT:
+	    __debug("what the fuck?????");
             ret = comdb2_SQLAllocStmt(InputHandle, OutputHandlePtr);
             break;
 

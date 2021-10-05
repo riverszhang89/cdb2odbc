@@ -217,8 +217,9 @@ SQLRETURN SQL_API SQLGetInfo(
     int t_ret;
     int stringprop = 1;
     char *dbver = "UNKNOWN";
+    int dbverlen = strlen(dbver);
 
-    __debug("enters method. %d", type);
+    __debug("enters method. type=%d", type);
 
     if(!hdbc)
         return SQL_INVALID_HANDLE;
@@ -234,17 +235,23 @@ SQLRETURN SQL_API SQLGetInfo(
             break;
         
         case SQL_DBMS_VER:
+	    __debug("is dbc conncted? %d", phdbc->connected);
             if (!phdbc->connected && (ret = comdb2_SQLConnect(phdbc)) !=
                     SQL_SUCCESS)
                 return ret;
             t_ret = cdb2_run_statement(phdbc->sqlh, "SELECT COMDB2_VERSION()");
-            if (t_ret != 0)
+            if (t_ret != 0) {
+		__debug("failed to retrieve version %s", cdb2_errstr(phdbc->sqlh));
                 return set_dbc_error(phdbc, ERROR_WTH, cdb2_errstr(phdbc->sqlh), t_ret);
-            while ((t_ret = cdb2_next_record(phdbc->sqlh)) == CDB2_OK)
+	    }
+            while ((t_ret = cdb2_next_record(phdbc->sqlh)) == CDB2_OK) {
                 dbver = cdb2_column_value(phdbc->sqlh, 0);
+		dbverlen = cdb2_column_size(phdbc->sqlh, 0);
+	    }
             if (t_ret != CDB2_OK_DONE)
                 return set_dbc_error(phdbc, ERROR_WTH, cdb2_errstr(phdbc->sqlh), t_ret);
             SET_CSTRING(value_ptr, dbver, buflen, minimum_length_required);
+	    __debug("dbver is %s (len = %d)", dbver, dbverlen);
             break;
         
         case SQL_DRIVER_NAME:
@@ -257,6 +264,7 @@ SQLRETURN SQL_API SQLGetInfo(
 
         case SQL_DRIVER_ODBC_VER:
             SET_CSTRING(value_ptr, DRVODBCVER, buflen, minimum_length_required);
+	    __debug("driver odbc version is (%d) %s", minimum_length_required, (SQLCHAR *)value_ptr);
             break;
 
 	default:
@@ -269,7 +277,7 @@ SQLRETURN SQL_API SQLGetInfo(
 
     __debug("min len %d, buflen %d", minimum_length_required, buflen);
 
-    if(minimum_length_required > buflen)
+    if(minimum_length_required >= buflen)
         /* For a string attribute, if the required length exceeds @buflen, give a warning.
            For other types, since @minimum_length_required was initialized to -1, 
            this branch will not be executed. */
@@ -329,15 +337,13 @@ SQLRETURN SQL_API SQLGetInfo(
 
         default:
             __debug("Unhandled type %d", type);
-            if(!handled)
-                ret = DBC_ODBC_ERR(ERROR_TYPE_OUT_OF_RANGE);
             break;
     }
 
-out: if(str_len)
+out: if(str_len && stringprop)
         *str_len = (SQLSMALLINT)minimum_length_required;
 
-    __debug("leaves method rc %d.", ret);
+    __debug("leaves method.");
     return ret;
 }
 
