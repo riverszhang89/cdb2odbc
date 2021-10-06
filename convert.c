@@ -448,7 +448,10 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
     switch(c_data_type) {
         case SQL_C_CHAR:
         case SQL_C_DEFAULT:
-            my_strncpy_out((char *)target_ptr, value, target_len);
+		printf("size is %d taget len %d %s %p\n", size, target_len, value, value);
+	WideCharToMultiByte(CP_ACP, 0, value, size/ sizeof(SQLWCHAR), target_ptr, target_len, NULL, NULL);
+		printf("size is %d taget len %d %s\n", size, target_len, value);
+            //my_strncpy_out((char *)target_ptr, value, target_len);
             *str_len = size - 1;
             if(size > target_len)
                 resp = CONV_TRUNCATED;
@@ -457,7 +460,7 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
         case SQL_C_WCHAR:
 #ifdef __WIN_UNICODE__
             len = MultiByteToWideChar(CP_UTF8, 0, value, -1, target_ptr, target_len / sizeof(wchar_t));
-            *str_len = len * sizeof(wchar_t);
+            *str_len = (len - 1) * sizeof(SQLWCHAR);
 #else
 	    mbstowcs((wchar_t *)target_ptr, value, target_len / sizeof(wchar_t) - 1);
             *str_len = size - 1;
