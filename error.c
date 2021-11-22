@@ -56,7 +56,7 @@ SQLRETURN comdb2_set_error(struct err **err, errid_t errid, const char *customiz
         return SQL_INVALID_HANDLE;
 
     if(errid < 0 || errid >= TOTAL_ERR_COUNT) 
-        return comdb2_set_error(err, ERROR_WTH, NULL, ODBC_ERROR_CODE);
+        return comdb2_set_error(err, ERROR_WTH, customized_msg, native_code);
 
     /* default message */
     default_msg = COMDB2_ERR_MSGS[errid];
@@ -171,6 +171,56 @@ SQLRETURN SQL_API SQLGetDiagField(SQLSMALLINT   handle_type,
     NOT_IMPL;
 }
 
+static SQLRETURN __SQLError(SQLHENV       henv,
+                            SQLHDBC       hdbc,
+                            SQLHSTMT      hstmt,
+                            SQLCHAR       *szSqlState,
+                            SQLINTEGER    *pfNativeError,
+                            SQLCHAR       *szErrorMsg,
+                            SQLSMALLINT   cbErrorMsgMax,
+                            SQLSMALLINT   *pcbErrorMsg)
+{
+	if (hstmt == SQL_NULL_HSTMT) {
+		if (hdbc == SQL_NULL_HDBC)
+			return SQLGetDiagRec(SQL_HANDLE_ENV,
+					(SQLHANDLE)henv,
+					1,
+					szSqlState,
+					pfNativeError,
+					szErrorMsg,
+					cbErrorMsgMax,
+					pcbErrorMsg);
+		return SQLGetDiagRec(SQL_HANDLE_DBC,
+					(SQLHANDLE)hdbc,
+					1,
+					szSqlState,
+					pfNativeError,
+					szErrorMsg,
+					cbErrorMsgMax,
+					pcbErrorMsg);
+	}
+
+	return SQLGetDiagRec(SQL_HANDLE_STMT,
+			(SQLHANDLE)hstmt,
+			1,
+			szSqlState,
+			pfNativeError,
+			szErrorMsg,
+			cbErrorMsgMax,
+			pcbErrorMsg);
+}
+
+SQLRETURN SQL_API SQLError (SQLHENV       henv,
+                    	    SQLHDBC       hdbc,
+                    	    SQLHSTMT      hstmt,
+                    	    SQLCHAR       *szSqlState,
+                    	    SQLINTEGER    *pfNativeError,
+                    	    SQLCHAR       *szErrorMsg,
+                    	    SQLSMALLINT   cbErrorMsgMax,
+                    	    SQLSMALLINT   *pcbErrorMsg)
+{
+	return __SQLError(henv, hdbc, hstmt, szSqlState, pfNativeError, szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
+}
 #ifdef __UNICODE__
 #include "errorw.c"
 #endif

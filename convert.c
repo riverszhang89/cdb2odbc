@@ -458,8 +458,7 @@ conv_resp convert_cdb2cstring(const void *value, int size, SQLSMALLINT c_data_ty
             break;
 
         case SQL_C_WCHAR:
-            //memcpy(target_ptr, value, (len = size > target_len ? target_len : size));
-            len = utf8_to_ucs2((SQLCHAR *)value, (SQLWCHAR *)target_ptr, target_len);
+            len = utf8_to_ucs2((SQLCHAR *)value, (SQLWCHAR *)target_ptr, target_len / sizeof(SQLWCHAR));
             if (len > 0)
                 *str_len = (len - 1) * sizeof(SQLWCHAR);
             if(size > (target_len / sizeof(SQLWCHAR)))

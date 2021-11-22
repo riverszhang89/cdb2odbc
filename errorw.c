@@ -45,3 +45,35 @@ SQLRETURN SQL_API SQLGetDiagRecW(
     __debug("leaves method.");
     return SQL_SUCCESS;
 }
+
+SQLRETURN SQL_API SQLErrorW(SQLHENV       henv,
+                    	    SQLHDBC       hdbc,
+                    	    SQLHSTMT      hstmt,
+                    	    SQLWCHAR      *szSqlState,
+                    	    SQLINTEGER    *pfNativeError,
+                    	    SQLWCHAR      *szErrorMsg,
+                    	    SQLSMALLINT   cbErrorMsgMax,
+                    	    SQLSMALLINT   *pcbErrorMsg)
+{
+    SQLRETURN ret;
+    SQLCHAR *msg_ansi;
+    SQLCHAR sql_state_ansi[6];
+    SQLSMALLINT msg_len_ansi;
+
+    __debug("enters method.");
+
+    msg_ansi = malloc(cbErrorMsgMax);
+
+    ret = __SQLError(henv, hdbc, hstmt, sql_state_ansi, pfNativeError, msg_ansi, cbErrorMsgMax, &msg_len_ansi);
+
+    if (ret == SQL_SUCCESS) {
+        utf8_to_ucs2(sql_state_ansi, szSqlState, 6);
+        int len = utf8_to_ucs2(msg_ansi, szErrorMsg, cbErrorMsgMax);
+        if (len > 0 && pcbErrorMsg != NULL)
+             *pcbErrorMsg = (len - 1);
+    }
+
+    free(msg_ansi);
+    __debug("leaves method.");
+    return SQL_SUCCESS;
+}
