@@ -20,7 +20,7 @@ conv_resp convert_cdb2real(const void *value, int size, SQLSMALLINT c_data_type,
             break;
 
         case SQL_C_WCHAR:
-            *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%f", num);
+            *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%f", num) * sizeof(SQLWCHAR);
             if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
                 return CONV_TRUNCATED;
             break;
@@ -66,7 +66,7 @@ conv_resp convert_cdb2datetime(const void *value, int size, SQLSMALLINT c_data_t
             *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t),
                     L"%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d %.*hs", datetime->tm.tm_year + 1900,
                     datetime->tm.tm_mon + 1, datetime->tm.tm_mday, datetime->tm.tm_hour,
-                    datetime->tm.tm_min, datetime->tm.tm_sec, datetime->msec, CDB2_MAX_TZNAME, datetime->tzname);
+                    datetime->tm.tm_min, datetime->tm.tm_sec, datetime->msec, CDB2_MAX_TZNAME, datetime->tzname) * sizeof(SQLWCHAR);
             if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
                 return CONV_TRUNCATED;
             break;
@@ -133,7 +133,7 @@ conv_resp convert_cdb2datetimeus(const void *value, int size,
             *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t),
                     L"%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.6d %.*hs", datetime->tm.tm_year + 1900,
                     datetime->tm.tm_mon + 1, datetime->tm.tm_mday, datetime->tm.tm_hour,
-                    datetime->tm.tm_min, datetime->tm.tm_sec, datetime->usec, CDB2_MAX_TZNAME, datetime->tzname);
+                    datetime->tm.tm_min, datetime->tm.tm_sec, datetime->usec, CDB2_MAX_TZNAME, datetime->tzname) * sizeof(SQLWCHAR);
             if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
                 return CONV_TRUNCATED;
             break;
@@ -192,7 +192,7 @@ conv_resp convert_cdb2inds(const void *value, int size, SQLSMALLINT c_data_type,
             break;
         case SQL_C_WCHAR:
             *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%d %d:%d:%d.%d",
-                    intv_cdb2->sign * intv_cdb2->days, intv_cdb2->hours, intv_cdb2->mins, intv_cdb2->sec, intv_cdb2->msec);
+                    intv_cdb2->sign * intv_cdb2->days, intv_cdb2->hours, intv_cdb2->mins, intv_cdb2->sec, intv_cdb2->msec) * sizeof(SQLWCHAR);
             if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
                 return CONV_TRUNCATED;
             break;
@@ -242,7 +242,7 @@ conv_resp convert_cdb2indsus(const void *value, int size, SQLSMALLINT c_data_typ
             break;
         case SQL_C_WCHAR:
             *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%d %d:%d:%d.%d",
-                    intv_cdb2->sign * intv_cdb2->days, intv_cdb2->hours, intv_cdb2->mins, intv_cdb2->sec, intv_cdb2->usec);
+                    intv_cdb2->sign * intv_cdb2->days, intv_cdb2->hours, intv_cdb2->mins, intv_cdb2->sec, intv_cdb2->usec) * sizeof(SQLWCHAR);
             if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
                 return CONV_TRUNCATED;
             break;
@@ -295,7 +295,7 @@ conv_resp convert_cdb2inym(const void *value, int size, SQLSMALLINT c_data_type,
 
         case SQL_C_WCHAR:
             *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%d-%d",
-                    intv_cdb2->sign * intv_cdb2->years, intv_cdb2->months);
+                    intv_cdb2->sign * intv_cdb2->years, intv_cdb2->months) * sizeof(SQLWCHAR);
             if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
                 return CONV_TRUNCATED;
             break;
@@ -326,6 +326,7 @@ conv_resp convert_cdb2inym(const void *value, int size, SQLSMALLINT c_data_type,
 conv_resp convert_cdb2blob(const void *value, int size, SQLSMALLINT c_data_type, SQLPOINTER target_ptr, SQLLEN target_len, SQLLEN *str_len)
 {
     conv_resp resp = CONV_YEAH;
+    int charlen;
 
     switch(c_data_type) {
         case SQL_C_BINARY:
@@ -339,13 +340,31 @@ conv_resp convert_cdb2blob(const void *value, int size, SQLSMALLINT c_data_type,
             break;
 
         case SQL_C_CHAR:
-            *str_len = size - 1;
-            if(size >= target_len - 1) {
-                size = (int)(target_len - 1);
+	    // https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/sql-to-c-binary?view=sql-server-ver15
+            *str_len = size * 2;
+            if((*str_len) + 1 > target_len) {
+                size = (target_len - 1) / 2;
                 resp = CONV_TRUNCATED;
             }
-            memcpy(target_ptr, value, size);
+
+	    for (int i = 0, ofs = 0; i < size; ++i)
+		ofs += sprintf(((char *)target_ptr) + ofs, "%02X", ((unsigned char *)value)[i]);
             ((char *)target_ptr)[size] = '\0';
+
+            break;
+
+	case SQL_C_WCHAR:
+            *str_len = size * 2 * sizeof(SQLWCHAR);
+	    charlen = target_len / sizeof(SQLWCHAR);
+            if((*str_len) + 1 > charlen) {
+                size = (charlen - 1) / 2;
+                resp = CONV_TRUNCATED;
+            }
+
+	    for (int i = 0, ofs = 0; i < size; ++i)
+		ofs += swprintf(((SQLWCHAR *)target_ptr) + ofs, charlen - ofs, L"%02X", ((unsigned char *)value)[i]);
+            ((SQLWCHAR *)target_ptr)[size * 2] = '\0';
+
             break;
 
         default:
@@ -372,7 +391,7 @@ conv_resp convert_cdb2int(const void *value, int size, SQLSMALLINT c_data_type, 
             break;
 
         case SQL_C_WCHAR:
-            *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%lld", num);
+            *str_len = swprintf((wchar_t *)target_ptr, target_len / sizeof(wchar_t), L"%lld", num) * sizeof(SQLWCHAR);
             if(*str_len >= target_len / (SQLLEN)sizeof(wchar_t))
                 return CONV_TRUNCATED;
             break;
